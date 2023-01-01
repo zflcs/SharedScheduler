@@ -20,13 +20,13 @@ jobs:
           image: 18810919727/latex_diff:v1
           options: -v ${{ github.workspace }}:/dir:rw
           run: |
-            latexdiff /Article/usenix.tex /Article/usenix_new.tex > /Article/diff.tex # 此处可以按需替换 old.tex、new.tex
+            latexdiff /dir/usenix.tex /dir/usenix_new.tex > /dir/diff.tex # 此处可以按需替换 old.tex、new.tex
             echo "Generating diff.tex successfully"
       - name: git add & commit
         run: |
           # 此处可以键入邮箱及姓名
           git config --global user.email "1491657576@qq.com"
           git config --global user.name "zflcs"
-          git add .
+          git add diff.tex
           git commit -m "update diff"
           git push -u origin main
