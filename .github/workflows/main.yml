@@ -27,6 +27,6 @@ jobs:
           # 此处可以键入邮箱及姓名
           git config --global user.email "1491657576@qq.com"
           git config --global user.name "zflcs"
-          git add diff.tex
+          git add .
           git commit -m "update diff"
           git push -u origin main
