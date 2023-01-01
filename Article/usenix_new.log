@@ -1,10 +1,10 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.11.10)  1 JAN 2023 20:39
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.11.10)  1 JAN 2023 20:49
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**usenix
-(./usenix.tex
+**usenix_new
+(./usenix_new.tex
 LaTeX2e <2021-11-15> patch level 1
 L3 programming layer <2022-02-24> (d:/texlive/2022/texmf-dist/tex/latex/base/article.cls
 Document Class: article 2021/10/04 v1.4n Standard LaTeX document class
@@ -530,8 +530,8 @@ LaTeX Info: Redefining \] on input line 2939.
 File: l3backend-pdftex.def 2022-02-07 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count306
 \l__pdf_internal_box=\box64
-) (./usenix.aux)
-\openout1 = `usenix.aux'.
+) (./usenix_new.aux)
+\openout1 = `usenix_new.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 61.
 LaTeX Font Info:    ... okay on input line 61.
@@ -611,11 +611,11 @@ Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 LaTeX Info: Redefining \ref on input line 61.
 LaTeX Info: Redefining \pageref on input line 61.
 LaTeX Info: Redefining \nameref on input line 61.
- (./usenix.out) (./usenix.out)
+ (./usenix_new.out) (./usenix_new.out)
 \@outlinefile=\write4
-\openout4 = `usenix.out'.
+\openout4 = `usenix_new.out'.
 
-LaTeX Font Info:    Trying to load font information for OT1+ptmcm on input line 84.
+LaTeX Font Info:    Trying to load font information for OT1+ptmcm on input line 83.
  (d:/texlive/2022/texmf-dist/tex/latex/psnfss/ot1ptmcm.fd
 File: ot1ptmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OT1/ptmcm.
 )
@@ -623,30 +623,30 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `ptmcm' (encoding: OT1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
-LaTeX Font Info:    Trying to load font information for OML+ptmcm on input line 84.
+LaTeX Font Info:    Trying to load font information for OML+ptmcm on input line 83.
  (d:/texlive/2022/texmf-dist/tex/latex/psnfss/omlptmcm.fd
 File: omlptmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OML/ptmcm.
 )
-LaTeX Font Info:    Trying to load font information for OMX+psycm on input line 84.
+LaTeX Font Info:    Trying to load font information for OMX+psycm on input line 83.
  (d:/texlive/2022/texmf-dist/tex/latex/psnfss/omxpsycm.fd
 File: omxpsycm.fd 2000/01/03 Fontinst v1.801 font definitions for OMX/psycm.
 )
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 84.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 83.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 84.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 83.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 84.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 83.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 111.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 110.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7.4> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 111.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 110.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 111.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 110.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 112.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 111.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <5> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 112.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 111.
 Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `pcr' (encoding: T1).
 (microtype)             For optimal results, create family-specific settings.
@@ -654,7 +654,7 @@ Package microtype Info: Loading generic protrusion settings for font family
  [1{d:/texlive/2022/texmf-var/fonts/map/pdftex/updmap/pdftex.map}
 
 
-] (./usenix.bbl
+] (./usenix_new.bbl
 Underfull \hbox (badness 5302) in paragraph at lines 10--16
 []\T1/ptm/m/n/10 (+20) Carl A. Wald-spurger.  Mem-ory re-source man-
  []
@@ -681,20 +681,20 @@ Underfull \hbox (badness 10000) in paragraph at lines 10--16
 
 ) [2
 
-] (./usenix.aux)
-Package rerunfilecheck Info: File `usenix.out' has not changed.
+] (./usenix_new.aux)
+Package rerunfilecheck Info: File `usenix_new.out' has not changed.
 (rerunfilecheck)             Checksum: 1275E8E856B3EE4E2D9F5D49E7858D01;688.
  ) 
 Here is how much of TeX's memory you used:
- 22554 strings out of 480175
- 417869 string characters out of 5894361
- 715634 words of memory out of 5000000
+ 22555 strings out of 480175
+ 417959 string characters out of 5894361
+ 714658 words of memory out of 5000000
  39924 multiletter control sequences out of 15000+600000
  529334 words of font info for 207 fonts, out of 8000000 for 9000
  36 hyphenation exceptions out of 8191
- 100i,10n,104p,999b,749s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 100i,10n,104p,1003b,749s stack positions out of 10000i,1000n,20000p,200000b,200000s
 {d:/texlive/2022/texmf-dist/fonts/enc/dvips/base/8r.enc}<d:/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><d:/texlive/2022/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb><d:/texlive/2022/texmf-dist/fonts/type1/urw/times/utmb8a.pfb><d:/texlive/2022/texmf-dist/fonts/type1/urw/times/utmr8a.pfb><d:/texlive/2022/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on usenix.pdf (2 pages, 76443 bytes).
+Output written on usenix_new.pdf (2 pages, 75376 bytes).
 PDF statistics:
  85 PDF objects out of 1000 (max. 8388607)
  70 compressed objects within 1 object stream
