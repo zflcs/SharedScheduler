@@ -1,0 +1,6 @@
+Article/*.aux
+Article/*.bbl
+Article/*.log
+Article/*.blg
+Article/*.synctex.gz
+Article/*.out

@@ -1,3 +1,0 @@
-latexdiff /Article/usenix.tex /Article/usenix_new.tex > /Article/diff.tex # 此处可以按需替换 old.tex、new.tex
-echo "Generating diff.tex successfully"
-
