@@ -91,7 +91,7 @@
 ![](./Article/assets/aread.png)
 <sub>图5：内核协程通过发送用户态中断</sub>
 
-![](uintr_handler.png)
+![](./Article/assets/uintr_handler.png)
 <sub>图6：用户态中断唤醒协程</sub>
 
 ## 5 编程接口
@@ -133,7 +133,7 @@
 
 最终，同步和异步系统调用在形式上达到高度统一，唯一的区别在于参数的不同。见图 9。
 
-![](syscall.png)
+![](./Article/assets/syscall.png)
 <sub>图9：同步、异步系统调用</sub>
 
 
