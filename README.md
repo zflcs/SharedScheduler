@@ -91,7 +91,7 @@
 ![](./Article/assets/aread.png)
 <sub>图5：内核协程通过发送用户态中断</sub>
 
-![[uintr_handler.png]]
+![](uintr_handler.png)
 <sub>图6：用户态中断唤醒协程</sub>
 
 ## 5 编程接口
