@@ -1,0 +1,291 @@
+%%=======================================================================
+% !Mode:: "TeX:UTF-8"
+% !TEX program  = PdfLaTeX
+%%=======================================================================
+% 模板名称：thubeamer
+% 模板版本：V1.1.1
+% 模板作者：杨敬轩（Jingxuan Yang）
+% 联系作者：yangjx20@mails.tsinghua.edu.cn & yanglatex2e@gmail.com
+% 模板适用：清华大学风格 Beamer 模板
+% 模板编译：手动编译方法参看 README.md 或 thubeamer.pdf
+%          编译 beamer 之前必须编译说明文档：make doc 或双击 makedoc.bat
+%          编译说明文档同时分离出四个样式文件 *thubeamer.sty
+%          GNU make 工具：make beamer
+%          Windows 批处理脚本：双击 makebeamer.bat 自动编译 beamer
+%          更多编译细节详见说明文档：thubeamer.pdf
+% 更新时间：2022/05/20
+% 模板帮助：请**务必务必务必**阅读 thubeamer.pdf 说明文档，文档查看方法：
+%          下载模板文件夹里就有，如果是从 CTAN 上安装更新本模板，则通过
+%          cmd 命令行：texdoc thubeamer 查看文档
+%          推荐前往模板的 GitHub 仓库获取最新文件，地址：
+%          https://github.com/YangLaTeX/thubeamer
+%%=======================================================================
+
+% 设置文档类别为 <beamer>
+% \documentclass[aspectratio=169]{beamer} % 设置长宽比为 16:9
+\documentclass{beamer}
+\usepackage{url}
+% 使用 <thubeamer> 主题
+% 模板选项如下
+% (a.1) smoothbars: 页面顶端单行显示目录，默认选项
+\usetheme{thubeamer}
+% \usetheme[sidebar]{subsectiontoc}
+% (a.2) sidebar: 页面左侧分栏显示目录
+% \usetheme[sidebar]{thubeamer}
+
+% (b) sectiontoc: 在每节（section）前显示目录，并高亮显示当前节，默认不显示
+
+% (c) subsectiontoc: 在每小节（subsection）前显示目录，并高亮显示当前节和当前小节，默认不显示
+
+% (d) en: 仅使用英文来制作 beamer，应用此选项后，汉字将全部无法编译
+
+% 图片存放路径
+\graphicspath{{figures/}}
+
+\include{macros}
+
+% 封面信息，方括号内容是显示在左侧边栏的内容（当选择 sidebar 主题时有效）
+\title[共享调度器技术报告]{共享调度器技术报告}
+\author[赵方亮、廖东海]{项目成员：赵方亮、廖东海\\[5mm] 导师：向勇 教授}
+\institute[清华大学]{\small  清华大学}
+\date{\small \vskip -10pt \today}
+
+% 开始写文章
+\begin{document}
+
+% 标题页
+\begin{frame}
+	\maketitle
+\end{frame}
+
+% 目录页
+\section*{目录}
+\frame{
+  \frametitle{\secname}
+  \tableofcontents[hideallsubsections]
+}
+
+\section{项目背景}
+
+\subsection{项目基础}
+
+\begin{frame}{项目基础}
+  \begin{block}{用户态中断\cite{gallium70}}
+    \begin{itemize}
+      \item 外部中断
+      \item 内核向用户进程发送中断
+    \end{itemize}
+  \end{block}
+  \begin{block}{Rust 协程机制\cite{stevenbai}}
+    \begin{itemize}
+      \item async/await
+      \item Executor 运行时
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\subsection{项目整体概况}
+
+\begin{frame}{项目整体概况}
+  \begin{figure}
+    \includegraphics[width=0.9\linewidth]{figures/overview.png}
+    \caption{项目整体概况}
+  \end{figure}
+\end{frame}
+
+
+\section{研究工作}
+
+\begin{frame}{已完成的研究工作及成果}
+  \begin{block}{已完成的研究工作简介}
+    \begin{itemize}
+      \setlength{\itemsep}{6pt}
+      \item 任务调度
+      \item 系统调用
+      \item 内核改造
+      \item vDSO 机制
+      \item 协程调度框架
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\subsection{任务调度}
+
+\begin{frame}{任务调度}
+  \begin{block}{进程、线程调度}
+    \begin{itemize}
+      \setlength{\itemsep}{6pt}
+      \item 由内核中的调度协程进行
+      \item 优先级：依赖协程优先级
+      \item 线程：平等
+    \end{itemize}
+  \end{block}
+  \begin{block}{协程调度}
+    \begin{itemize}
+      \setlength{\itemsep}{6pt}
+      \item 用户态：共享调度器
+      \item 优先级队列
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}{状态转换模型}
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/tsm.png}
+    \caption{状态转换模型}
+    \label{fig:tsm}
+  \end{figure}
+\end{frame}
+
+\subsection{系统调用}
+
+\begin{frame}{系统调用（以 read 系统调用为例）}
+  \begin{block}{接口}
+    同步与异步的接口进行统一，通过参数进行区别
+    \begin{itemize}
+      \item {read!(fd, buffer);}
+      \item {read!(fd, buffer, key, cid);}
+    \end{itemize}
+  \end{block}
+  \begin{block}{功能扩展}
+    定义 AsyncCall 数据结构，实现 Future 特性，让系统调用阻塞在用户态
+  \end{block}
+\end{frame}
+
+\subsection{内核改造}
+
+\begin{frame}{内核改造}
+  \begin{block}{内核调度协程}
+    \begin{itemize}
+      \item 主动让权
+    \end{itemize}
+  \end{block}
+  \begin{block}{系统调用处理}
+    以 read 系统调用为例 
+    \begin{itemize}
+      \item 创建内核协程：立即返回
+      \item 唤醒用户协程：内核协程完成复制操作，发起用户态中断唤醒用户态协程
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\subsection{vDSO 机制}
+
+\begin{frame}{vDSO 机制}
+  共享调度器由内核进行维护，以 vDSO 的形式暴露给用户进程
+  \begin{block}{加载与动态链接}
+    \begin{itemize}
+      \item 创建进程时映射共享调度器
+      \item 查找进程符号表，进行链接
+    \end{itemize}
+  \end{block}
+  \begin{block}{堆、Executor}
+    \begin{itemize}
+      \item 全局堆分配器
+      \item 全局 Executor
+    \end{itemize}
+  \end{block}
+  
+\end{frame}
+
+\subsection{协程调度框架}
+
+\begin{frame}{协程调度框架}
+  协程调度框架依托于 Executor 数据结构，为其实现不同的成员函数，从而实现不同的调度算法
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{figures/sf.png}
+    \caption{协程调度框架}
+    \label{fig:sf}
+  \end{figure}
+\end{frame}
+
+
+\section{性能评估}
+
+\subsection{性能评估}
+
+\begin{frame}{线程、协程对比}
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/mdmc.png}
+    \caption{线程、协程时延对比}
+    \label{fig:mdmc}
+  \end{figure}
+  \begin{itemize}
+    \setlength{\itemsep}{6pt}
+    \item 连接数较少时，线程模型与协程模型持平，随着连接数增加，线程模型时延迅速上升，远高于协程
+    \item 数据规模增大，线程模型时延增加幅度远大于协程模型
+  \end{itemize} 
+\end{frame}
+
+\begin{frame}{线程、协程对比}
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.6\linewidth]{figures/tmc.png}
+    \caption{线程、协程吞吐量对比}
+    \label{fig:tmc}
+  \end{figure} 
+  \begin{itemize}
+    \setlength{\itemsep}{6pt}
+    \item 连接数增加，线程模型吞吐量增长缓慢
+  \end{itemize} 
+\end{frame}
+
+\subsection{优先级}
+
+\begin{frame}{优先级}
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1.0\linewidth]{figures/cwp.png}
+    \caption{不同优先级下的时延与抖动}
+    \label{fig:cwp}
+  \end{figure}
+  \begin{itemize}
+    \setlength{\itemsep}{6pt}
+    \item 随着 CPU 资源数量的增加，由于调度器同步互斥带来的开销，高优先级的连接出现小幅度的性能下降
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{优先级}
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.6\linewidth]{figures/cwpdc.png}
+    \caption{不同优先级下的时延分布}
+    \label{fig:cwpdc}
+  \end{figure}  
+  \begin{itemize}
+    \setlength{\itemsep}{6pt}
+    \item 资源有限时，保证了优先级高的任务
+  \end{itemize}
+\end{frame}
+
+\section{未来展望}
+
+\begin{frame}{未来展望}
+  \begin{block}{下一步工作}
+    \begin{itemize}
+      \item 文件系统扩展
+      \item 进程、线程、协程调度
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+
+\begin{frame}[allowframebreaks]{参考文献}
+  \bibliographystyle{thubeamer}
+  \bibliography{reference}
+\end{frame}
+
+\begin{frame}
+	\begin{center}
+    {\Huge\calligra Thanks for your attention!}
+    \vspace{1cm}
+
+    {\Huge Q \& A}
+  \end{center}
+\end{frame}
+
+% 结束文档撰写
+\end{document}
