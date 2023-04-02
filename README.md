@@ -20,15 +20,82 @@
 
 ![](./Article/assets/uintc.png)
 
-从上图可以看出，在最好的情况下（即发送端和接收端都在核上时），用户态中断下的信号传递不需要进入内核，而且接收端也会及时响应。
+<sub>图1：传统的信号与用户态中断的对比示意图</sub>
+
+从图1可以看出，在最好的情况下（即发送端和接收端都在核上时），用户态中断下的信号传递不需要进入内核，而且接收端也会及时响应。
 
 ### 1.2 Rust 语言协程机制
 
+Rust 在早期曾支持过有栈协程，但为了更好地避免内存泄漏问题，以及更好地进行调试，Rust在 1.0 版本不再支持有栈协，而转向了基于 `async/await` 的异步编程模型，2017年开始在 `nightly` 版本对无栈协程进行支持，后续所提到的协程都指无栈协程。
 
+Rust编译器支持将异步函数转化为协程的能力。使用 `async/awit` 语法，编译器可以将异步函数通过宏展开成一个状态机函数，该状态机在异步操作未完成时挂起，在异步操作完成时进行恢复。这种转换在编译期完成，保证了运行时的高效性和安全性。
+
+值得注意的是，Rust语言本身不提供异步运行时，仅仅提供支持运行时的任务抽象 `Future` 、异步唤醒的抽象 `Waker` 和 异步函数转换成状态机的语法糖 `async/await` 。第三方库往往借助Rust语言提供的简单抽象来实现自己的异步运行时。 
+
+Rust异步编程模型如图2所示。
+
+![](./Article/assets/rust_async_program_model.png)
+<sub>图2：Rust异步编程模型</sub>
+
+首先用户创建任务并将任务加入全局的任务队列中，然后Executor中的worker线程会不断从任务队列中取出任务并执行，并且会创建一个waker用于保存任务的执行状态。当任务需要等待异步消息时，则woker 会将对应的waker丢到相应的异步消息的 Reactor 中，然后执行其他任务。而在Reactor中当异步消息来临时，则会找到对应的Waker并将对应的阻塞任务重新加入到任务队列中。
 
 ## 2 项目整体介绍
 
-（补充图片，项目涉及的几个部分）
+### 2. 1 代码框架
+
+```
+./rCore-N
+├── assets
+├── lib_so
+├── LICENSE
+├── os
+├── README.md
+├── sleep.sh
+├── syscall
+├── trace
+└── user
+```
+`lib_so` 目录中是共享调度器的主要代码，它会被单独编译成二进制文件并同时映射到内核空间和用户空间中。
+
+user 目录中包含了测试的用户态代码，本文中用到的测试包括了：`async_pipe.rs` 、`async_pipe_multi_ring.rs` 、`connect_test.rs` 、`connect_thread_test.rs` 和 `connect_test_with_prio.rs` 。
+
+syscall 中包含了用户态中系统调用的接口，部分系统调用通过宏的形式实现了同步系统调用和异步系统调用形式上的统一。
+
+os 目录中包含了内核的代码。
+
+### 2.2 环境配置
+
+#### 2.2.1 Qemu
+
+本框架需要Qemu支持RISC-V的N扩展。以此需要编译安装支持N扩展的Qemu版本：
+```shell
+git clone https://github.com/duskmoon314/qemu.git
+mkdir qemu-build
+cd qemu-build
+../qemu/configure --target-list="riscv64-softmmu" --disable-werror
+make -j$nproc
+```
+
+#### 2.2.2 配置项目代码
+
+在qemu和qemu-build所在目录下执行：
+```shell
+git clone https://github.com/CtrlZ233/SharedScheduler.git
+cargo install just
+```
+项目中支持了三个串口通信，因此需要打开三个 shell 然后执行 tty 获取相应编号，填入 `os/justfile` 中的 `SERIAL_FLAGS` 参数。
+
+在三个 tty 中的后两个 shell 中执行 `./sleep.sh` 脚本防止shell的 std 输入输出的字符污染：
+```shell
+cd rCore-N
+./sleep.sh
+```
+
+在剩下的 tty 中执行：
+```shell
+cd rCore-N/os
+LOG=INFO just run
+```
 
 
 ## 3 任务调度与状态转换模型
@@ -185,6 +252,7 @@ Rust 使用默认的全局分配器（global allocator）在堆上进行分配�
 我们分配单线程给共享调度器用来执行串行的 Pipe 环，测量整个环的执行时间，并与 AsyncOS 的性能进行对比。
 
 实验的固定参数：
+- 对应的测试文件为 `user/src/bin/async_pipe.rs`
 - [qemu 5.0 for Riscv with N Extension](https://github.com/duskmoon314/qemu)
 - 单CPU。
 
@@ -225,6 +293,7 @@ Rust 使用默认的全局分配器（global allocator）在堆上进行分配�
 我们的共享调度相比于 AsyncOS，一个重要的特性就是支持多核多线程并行执行调度器，为此我们向用户暴露了 `add_virtual_core` 接口用于增加新的线程来执行调度器。同时，我们注意到，上面设计的实验并不适用于多线程加速，因为上面的读写管道环是一个串行环，必须等到之前的协程完成后才能执行下一个协程。因此我们自然而然想到了用多个环来测试我们多线程下的加速比，然而我们仍需要注意将同一个环的各个部分分配到某一个固定的线程上，如果同一个环的不同部分分布在不同的线程上，那仍会出现一个线程等待另一个线程的情况。仔细思考，我们可以发现，我们只需要将环的各个部分的优先级按照顺时针从高到低进行设置即可，只要在顺时针前半段的高优先级 `Server` 先执行，就不会出现等待的情况。
 
 实验的固定参数如下：
+- 对应的测试文件为：`user/src/bin/async_pipe_multi_ring.rs`
 - [qemu 5.0 for Riscv with N Extension](https://github.com/duskmoon314/qemu)
 - 4个物理CPU。
 - 4个独立环，每个环的长度为512。
@@ -270,6 +339,7 @@ Rust 使用默认的全局分配器（global allocator）在堆上进行分配�
 为了衡量协程与线程在切换上的开销，我们分别用线程模型和协程模型实现了 Server Process 的三个部分。我们用 Thread-1 表示线程模型下处理 $1\times 1$ 矩阵请求的测试结果，用 Coroutine-20 表示协程模型下处理 $20\times 20$ 矩阵请求的测试结果，其他以此类推。
 
 实验固定参数：
+- 对应的测试文件为：`user/src/bin/connect_test.rs` 和 `user/src/bin/connect_thread_test.rs` 。
 - [qemu 5.0 for Riscv with N Extension](https://github.com/duskmoon314/qemu)
 - 4个物理CPU。
 - 连接客户端客户端发送请求的周期为50ms。
@@ -301,6 +371,7 @@ Rust 使用默认的全局分配器（global allocator）在堆上进行分配�
 在计算机系统中，CPU资源和IO资源总是有限的，在有限的资源条件下，我们可以通过设置优先级来优先保证某一些服务。在WebServer的场景中，我们可以将各个连接的优先级按照阶梯式进行设置，来保证某些连接的更低的时延和更小的抖动。在我们的实验中，将128个连接分为7个优先级，分别测试不同数量的有限资源下不同优先级的连接的性能。
 
 实验固定参数：
+- 对应的测试文件为：`user/src/bin/connect_test_with_prio.rs` 。
 - [qemu 5.0 for Riscv with N Extension](https://github.com/duskmoon314/qemu)
 - 4个物理CPU。
 - 连接客户端客户端发送请求的周期为100ms。
