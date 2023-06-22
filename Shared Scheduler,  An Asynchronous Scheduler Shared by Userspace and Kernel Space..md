@@ -17,18 +17,17 @@ Multithread programing, as a classic model for solving concurrency issues, has 
 	- 与共享调度器的异步唤醒相结合。
 
 
-# 2. Design and Implication
+# 2. Design and Implementation
 
 ## 2.1 Design
-
+- 系统框架。
 - 进程、线程、协程的概念重新定义。
 - 调度器设计
 	- 协程调度。
 	- 进程、线程调度。
 - 状态转换模型。
 - 调度器提供的接口。
-- 使用vdso提供一套统一的调度框架。
-## 2.2  Implication
+## 2.2  Implementation
 
 - 局部优先级和全局优先级。
 - 异步系统调用实现
@@ -38,9 +37,10 @@ Multithread programing, as a classic model for solving concurrency issues, has 
 - 兼容性实现
 	- 用户态的代码入口为调度器初始化代码，为用户提供完全异步的环境。
 	- 内核态的线程调度和协程调度的统一。
+- 模块化调度器，用vdso在用户态和内核态复用了同一套调度代码。
 
 # 3. Performance Evaluation
-1. 串行环实验。
+1. 用户态和内核态的优先级串口实验。
 2. WebServer实验。
 	1. 协程的切换开销远低于线程。
 	2. 优先级在资源有限的情况下，保证某些任务能够高效完成。
@@ -49,6 +49,6 @@ Multithread programing, as a classic model for solving concurrency issues, has 
 - 总结本文工作，重申实验结论。
 	- 将协程作为内核衡量调度的因素，提升系统资源的整体利用率。
 	- 将协程引入内核并作为内核调度的基本单位，在内核构建了一套通用的异步处理机制。
-	- 利用用户态中断对部分IO系统调用进行了异步化改造。
-	- 模块化调度器，用vdso在用户态和内核态复用了同一套调度代码。
+	- 协程优先级。
+	- 利用用户态中断对IO系统调用进行了异步化改造。
 	- 实验结论。
