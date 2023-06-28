@@ -25,7 +25,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "log.md",
+                "file": "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
                 "mode": "source",
                 "source": false
               }
@@ -106,7 +106,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "log.md",
+                "file": "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -123,7 +123,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "log.md",
+                "file": "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -146,7 +146,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "log.md"
+                "file": "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md"
               }
             }
           }
@@ -159,24 +159,27 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "switcher:打开快速切换": false,
-      "graph:查看关系图谱": false,
-      "canvas:新建白板": false,
-      "daily-notes:打开/创建今天的日记": false,
-      "templates:插入模板": false,
-      "command-palette:打开命令面板": false
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
     }
   },
   "active": "248c310f98e0f6d5",
   "lastOpenFiles": [
+    "SharedScheduler.pdf",
+    "bibtex_ref/epoll.md",
     "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
-    "58E79000",
     "README.md",
+    "bibtex_ref",
+    "log.md",
+    "58E79000",
     "E04E7410",
     "Article/assets/rust_async_program_model.excalidraw.crswap",
     "Article/assets/rust_async_program_model.excalidraw",
     "Article/assets/msg_delay_model_compare.png",
-    "log.md",
     "Article/assets/multi_pipe_ring.png",
     "Article/assets/multi_pipe_ring.png",
     "Pasted image 20230402105930.png",
@@ -190,7 +193,6 @@
     "Article/assets/SyncPipeRing.png",
     "beamer.pdf",
     "TechRep/target/report.pdf",
-    "技术报告.pdf",
-    "Article/assets/test_graph.excalidraw"
+    "技术报告.pdf"
   ]
 }
