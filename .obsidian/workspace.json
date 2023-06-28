@@ -159,18 +159,20 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "switcher:Open quick switcher": false,
-      "graph:Open graph view": false,
-      "canvas:Create new canvas": false,
-      "daily-notes:Open today's daily note": false,
-      "templates:Insert template": false,
-      "command-palette:Open command palette": false
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false
     }
   },
   "active": "248c310f98e0f6d5",
   "lastOpenFiles": [
-    "bibtex_ref/lee.md",
+    "Article/assets/rust_async_program_model.png",
+    "Article/assets/throughput_model_compare.png",
     "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
+    "bibtex_ref/lee.md",
     "bibtex_ref/memif.md",
     "README.md",
     "SharedScheduler.pdf",
@@ -187,7 +189,6 @@
     "Article/assets/multi_pipe_ring.png",
     "Pasted image 20230402105930.png",
     "~$共享调度器 on qemu性能测试.xlsx",
-    "Article/assets/rust_async_program_model.png",
     "Article/assets/test_graph.excalidraw.crswap",
     "Article/assets/multi_ring_prio_setting.png",
     "Article/assets/multi_ring_prio_setting.png",
