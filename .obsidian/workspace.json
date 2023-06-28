@@ -169,10 +169,13 @@
   },
   "active": "248c310f98e0f6d5",
   "lastOpenFiles": [
-    "SharedScheduler.pdf",
-    "bibtex_ref/epoll.md",
+    "bibtex_ref/lee.md",
     "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
+    "bibtex_ref/memif.md",
     "README.md",
+    "SharedScheduler.pdf",
+    "bibtex_ref/LXDs.md",
+    "bibtex_ref/epoll.md",
     "bibtex_ref",
     "log.md",
     "58E79000",
@@ -192,7 +195,6 @@
     "Article/assets/single_pipe_ring.png",
     "Article/assets/SyncPipeRing.png",
     "beamer.pdf",
-    "TechRep/target/report.pdf",
-    "技术报告.pdf"
+    "TechRep/target/report.pdf"
   ]
 }
