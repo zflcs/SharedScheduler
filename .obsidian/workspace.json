@@ -167,8 +167,14 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "248c310f98e0f6d5",
+  "active": "9df76f9ca5b1346f",
   "lastOpenFiles": [
+    "Article/assets/async_syscall.excalidraw.crswap",
+    "Article/assets/async_syscall.png",
+    "Article/assets/global&local_prio.excalidraw",
+    "Article/assets/gloabl&local_prio.png",
+    "Article/assets/gloabl&local_prio.png",
+    "Article/assets/async_syscall.excalidraw",
     "Article/assets/rust_async_program_model.png",
     "Article/assets/throughput_model_compare.png",
     "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
@@ -190,12 +196,6 @@
     "Pasted image 20230402105930.png",
     "~$共享调度器 on qemu性能测试.xlsx",
     "Article/assets/test_graph.excalidraw.crswap",
-    "Article/assets/multi_ring_prio_setting.png",
-    "Article/assets/multi_ring_prio_setting.png",
-    "Article/assets/single_pipe_ring.jpg",
-    "Article/assets/single_pipe_ring.png",
-    "Article/assets/SyncPipeRing.png",
-    "beamer.pdf",
-    "TechRep/target/report.pdf"
+    "Article/assets/multi_ring_prio_setting.png"
   ]
 }

@@ -56,6 +56,8 @@ In traditional multi-core systems, when user processes running on two cores comm
 
 ## 3.1 Design
 - 系统框架。
+	- 调度协程。
+	- 普通协程。
 - 进程、线程、协程的概念重新定义。
 - 调度器设计
 	- 协程调度。
@@ -64,11 +66,67 @@ In traditional multi-core systems, when user processes running on two cores comm
 - 调度器提供的接口。
 ## 3.2  Implementation
 
+This chapter discusses some implementation details regarding the shared scheduler.
+
+### 3.2.1 Global priority and local priority.
+
+In the shared scheduler, each process (with the kernel as a special process) maintains a coroutine queue, and each coroutine has its own priority. We consider the highest priority within a process as the priority of this process. Additionally, a global priority array is maintained in the system to record the priorities of all processes. The global priority is used to select the appropriate process for scheduling coroutines. When a process is selected for execution, using `poll` as the entry function will select the highest priority coroutine within that process for execution.coroutine within that process for execution. 
+
+![[gloabl&local_prio.png]]
+
+It is important to consider the timing of updating local and global priorities. The following are some important timing considerations for updating priorities:
+- **coroutine spawn**: When a new coroutine is added to the ready queue, it is important to update the local priority bitmap and to check for any changes in the highest priority. If the highest priority has changed, the global priority array should be updated accordingly.
+- **fetch**: When a coroutine is removed from the ready queue, it is important to update the local priority bitmap accordingly. Since the coroutine has not yet started its execution, there is no need to update the global priority array.
+- **re_back**: When a coroutine in pending state is awakened, it is important to check and update the local priority bitmap, and to check for any changes in the highest priority. If the highest priority has changed, the global priority array should be updated accordingly.
+
+### 3.2.2 Asynchronous system calls
+
+The support for asynchronous system calls mainly involves two parts: user space and kernel space.
+
+#### User Space
+
+The modification of the user space system call interface to support asynchronous calls needs to consider both functional differences and the need for formal consistency. There should be an effort to minimize the differences from synchronous system calls. Additionally, automation should be considered throughout the modification process.
+
+To enable system calls to support asynchronous features, an `AsyncCall` auxiliary data structure needs to be added, and the Future trait should be implemented for it according to Rust language requirements. After completing this work, the `await` keyword can be used when calling system calls.
+
+The formal differences should be minimized as much as possible. We use Rust language procedural macros to generate both synchronous and asynchronous system calls. In the end, synchronous and asynchronous system calls achieve a high degree of formality consistency, with the only difference being the parameters. The format is shown in the table below.
+```rust
+#[async_fn(true)] 
+pub fn read(fd: usize, buffer: &mut [u8], key: usize, cid: usize) -> isize {
+	sys_read(fd, buffer.as_mut_ptr() as usize, buffer.len(), key, cid) 
+}
+
+#[async_fn]
+pub fn write(fd: usize, buffer: &[u8], key: usize, cid: usize) -> isize { 
+	sys_write(fd, buffer.as_ptr() as usize, buffer.len(), key, cid) 
+}
+
+read_fd!(fd, buffer, key, current_cid); // async call
+read_fd!(fd, buffer); // sync call
+```
+
+#### Kernel Space
+
+In addition to ensuring formal consistency in the user-level system call interface, we also aim for consistency in the kernel system call processing interface. Ultimately, the kernel determines whether to execute synchronous or asynchronous processing logic based on the system call parameters. In the case of asynchronous processing, the kernel uses some method to immediately return the task to user space without waiting for the corresponding processing flow to complete synchronously. Once the kernel completes the corresponding asynchronous processing, it wakes up the corresponding user-level coroutine.
+
+For instance, the following diagram illustrates the entire process of an asynchronous system call for socket read operation. After entering the kernel, if an asynchronous process is executed, the synchronous process in the kernel is encapsulated into a kernel coroutine, which is then added to the kernel executor. The process then returns to user space and generates a future to wait for the waking up of the user coroutine that executes the asynchronous system call. The user's executor then switches to execute the next user coroutine. After the asynchronous system call returns to user space, the kernel's processing flow is encapsulated into a coroutine, but it is not executed. The coroutine waits for the network driver to notify the kernel after the data is ready, and then the kernel coroutine is awakened to execute the corresponding processing. Once the kernel finishes the processing (in this case, copying data to the user space buffer), it generates a user space interrupt, passing the ID of the corresponding coroutine to be awakened. The user space interrupt handler then wakes up the corresponding coroutine.
+
+![[async_syscall.png]]
+
+### 3.2.3 Completely asynchronous scheduling environment
+
+To achieve better uniformity in coroutine scheduling, we have carried out compatibility adaptations on the previously Unix-like runtime environments in both user mode and kernel mode. We have provided a completely asynchronous scheduling environment for both user and kernel modes.
+
+In user mode, each process will be initialized using the shared scheduler environment initialization function. After initialization, the main function provided by the user program will be encapsulated into an asynchronous coroutine (which is equivalent to a synchronous task that cannot be awaited) and added to the ready queue for unified scheduling. In the end, all tasks in user mode are executed under the scheduling of the shared scheduler.
+
+In kernel mode, the original scheduling task used to schedule user-mode processes is also encapsulated as a kernel scheduling coroutine, which participates in scheduling along with other ordinary kernel coroutines.Since the scheduling of user processes is synchronous, when encapsulating it as a scheduling coroutine, it is necessary to manually block and switch to other kernel coroutines. 
+
+### 3.2.4 How to share scheduler code between kernel and user mode
+
 - 局部优先级和全局优先级。
 - 异步系统调用实现
 	- 接口改造
 	- 异步系统调用的唤醒机制实现（结合用户态中断）。
-- 用户态中断唤醒的同步互斥的问题
 - 兼容性实现
 	- 用户态的代码入口为调度器初始化代码，为用户提供完全异步的环境。
 	- 内核态的线程调度和协程调度的统一。
