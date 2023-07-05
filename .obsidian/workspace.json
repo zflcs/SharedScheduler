@@ -13,26 +13,13 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "README.md",
-                "mode": "source",
-                "source": false
-              }
-            }
-          },
-          {
-            "id": "248c310f98e0f6d5",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
                 "file": "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
                 "mode": "source",
                 "source": false
               }
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -169,18 +156,25 @@
   },
   "active": "9df76f9ca5b1346f",
   "lastOpenFiles": [
-    "Article/assets/async_syscall.excalidraw.crswap",
-    "Article/assets/async_syscall.png",
-    "Article/assets/global&local_prio.excalidraw",
-    "Article/assets/gloabl&local_prio.png",
-    "Article/assets/gloabl&local_prio.png",
-    "Article/assets/async_syscall.excalidraw",
-    "Article/assets/rust_async_program_model.png",
-    "Article/assets/throughput_model_compare.png",
+    "Article/assets/connect_with_prio_delay_distribution.png",
+    "Article/assets/connect_with_prio.png",
+    "Article/assets/core1_cwpt.png",
+    "Article/assets/core4_cwpt.png",
+    "Article/assets/core3_cwpt.png",
+    "Article/assets/core2_cwpt.png",
     "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
+    "Article/assets/connect_with_prio.png",
+    "~$共享调度器 on qemu性能测试 v2.0.xlsx",
+    "README.md",
+    "Article/assets/compare_thread_coroutine.png",
+    "Article/assets/throughput_model_compare.png",
+    "Article/assets/web_server_framework.png",
+    "Article/assets/async_syscall.excalidraw.crswap",
+    "Article/assets/uintc.png",
+    "Article/assets/global&local_prio.excalidraw",
+    "Article/assets/async_syscall.excalidraw",
     "bibtex_ref/lee.md",
     "bibtex_ref/memif.md",
-    "README.md",
     "SharedScheduler.pdf",
     "bibtex_ref/LXDs.md",
     "bibtex_ref/epoll.md",
@@ -189,13 +183,6 @@
     "58E79000",
     "E04E7410",
     "Article/assets/rust_async_program_model.excalidraw.crswap",
-    "Article/assets/rust_async_program_model.excalidraw",
-    "Article/assets/msg_delay_model_compare.png",
-    "Article/assets/multi_pipe_ring.png",
-    "Article/assets/multi_pipe_ring.png",
-    "Pasted image 20230402105930.png",
-    "~$共享调度器 on qemu性能测试.xlsx",
-    "Article/assets/test_graph.excalidraw.crswap",
-    "Article/assets/multi_ring_prio_setting.png"
+    "Article/assets/rust_async_program_model.excalidraw"
   ]
 }

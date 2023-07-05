@@ -55,6 +55,7 @@ In traditional multi-core systems, when user processes running on two cores comm
 # 3. Design and Implementation
 
 ## 3.1 Design
+
 - 系统框架。
 	- 调度协程。
 	- 普通协程。
@@ -72,7 +73,7 @@ This chapter discusses some implementation details regarding the shared schedule
 
 In the shared scheduler, each process (with the kernel as a special process) maintains a coroutine queue, and each coroutine has its own priority. We consider the highest priority within a process as the priority of this process. Additionally, a global priority array is maintained in the system to record the priorities of all processes. The global priority is used to select the appropriate process for scheduling coroutines. When a process is selected for execution, using `poll` as the entry function will select the highest priority coroutine within that process for execution.coroutine within that process for execution. 
 
-![[gloabl&local_prio.png]]
+![](./Article/assets/gloabl&local_prio.png)
 
 It is important to consider the timing of updating local and global priorities. The following are some important timing considerations for updating priorities:
 - **coroutine spawn**: When a new coroutine is added to the ready queue, it is important to update the local priority bitmap and to check for any changes in the highest priority. If the highest priority has changed, the global priority array should be updated accordingly.
@@ -81,7 +82,7 @@ It is important to consider the timing of updating local and global priorities. 
 
 ### 3.2.2 Asynchronous system calls
 
-The support for asynchronous system calls mainly involves two parts: user space and kernel space.
+Synchronous system calls, such as "read", block the entire thread. In a fully asynchronous coroutine programming environment, it is necessary to transform system calls into asynchronous operations to ensure that they only block the current coroutine at most. The support for asynchronous system calls mainly involves two parts: user space and kernel space.
 
 #### User Space
 
@@ -111,7 +112,7 @@ In addition to ensuring formal consistency in the user-level system call inter
 
 For instance, the following diagram illustrates the entire process of an asynchronous system call for socket read operation. After entering the kernel, if an asynchronous process is executed, the synchronous process in the kernel is encapsulated into a kernel coroutine, which is then added to the kernel executor. The process then returns to user space and generates a future to wait for the waking up of the user coroutine that executes the asynchronous system call. The user's executor then switches to execute the next user coroutine. After the asynchronous system call returns to user space, the kernel's processing flow is encapsulated into a coroutine, but it is not executed. The coroutine waits for the network driver to notify the kernel after the data is ready, and then the kernel coroutine is awakened to execute the corresponding processing. Once the kernel finishes the processing (in this case, copying data to the user space buffer), it generates a user space interrupt, passing the ID of the corresponding coroutine to be awakened. The user space interrupt handler then wakes up the corresponding coroutine.
 
-![[async_syscall.png]]
+![](./Article/assets/async_syscall.png)
 
 ### 3.2.3 Completely asynchronous scheduling environment
 
@@ -133,6 +134,47 @@ In kernel mode, the original scheduling task used to schedule user-mode proces
 - 模块化调度器，用vdso在用户态和内核态复用了同一套调度代码。
 
 # 4. Performance Evaluation
+
+To demonstrate the lower switching overhead of coroutine programming model compared to thread programming model, we constructed two different TcpServer models using coroutine and thread respectively to test the server's throughput, message latency, and latency jitter.
+
+In addition, we will demonstrate the significant role of priority in ensuring the real-time performance of certain specific tasks under limited resources by analyzing the impact of coroutine priority on task throughput, message latency, and latency jitter in the TcpServer experiment.
+
+We implemented the shared scheduler based on rCore, which is a small operating system almost entirely written in Rust, characterized by its compactness and efficiency. It can also fully leverage Rust's support for asynchronous programming to quickly implement the shared scheduler.(需要介绍用户态中断的硬件环境)
+
+The test scenario for TcpServer is shown in the following figure. The Msg Sender in the client sends data of a certain length to the server at regular intervals, while the Msg Recv in the client receives responses from the server, times the response time according to the timer, and waits for the timer to expire before sending the next request after receiving a response. Each connection in the server consists of three components:
+- Msg Recv, which sends the received message to the request message queue.
+- Msg Server, which takes messages from the request message queue, performs matrix operations, and sends the results to the response message queue.
+- Msg Sender, which takes responses from the response message queue and returns them to the client.
+
+![](./Article/assets/web_server_framework.png)
+
+These three components transfer data through a shared message buffer.
+
+## 4.1 Coroutine programming model vs. thread programming model
+
+To evaluate the advantages and disadvantages of the coroutine and thread programming models, as well as the switching overhead between them, we implemented the three components of the Server Process using the thread model and the coroutine model respectively. We represent the test results for processing 1 × 1 matrix requests in the thread model as Thread-1, and the test results for processing 20 × 20 matrix requests in the coroutine model as Coroutine-20. Similarly, the other results are represented accordingly. The experiments were conducted on 4 physical CPUs, with the server allocating 4 virtual CPUs. The client sent requests at a frequency of 100ms.
+
+The test results for message latency are shown in the following figure. As can be seen from the figure, the thread model has similar or even slightly lower message latency than the coroutine model when the number of connections is small. This is because when the number of connections is small, the kernel can directly schedule threads to execute tasks, while the coroutine model adds an extra layer of synchronization and mutual exclusion operations in the scheduler, resulting in slightly higher latency. As the number of connections increases, the delay of the thread model rapidly increases and is much higher than that of the coroutine model. This is because most coroutine switches do not need to trap into the kernel, only switching the function stack, resulting in much smaller switching overhead than threads. Comparing different matrix request sizes under the same model, it is found that the larger the matrix size, the higher the latency, which is due to the larger overhead of message sending and receiving and message processing for larger matrix requests, leading to an expected increase in latency.
+
+![](./Article/assets/compare_thread_coroutine.png)
+
+
+The figure also shows the test results of the total throughput for different matrix request sizes under different models. It can be seen that the total throughput of the server under the coroutine model increases linearly with the increase of the number of connections, even when the matrix request size increases. Since the load has not reached the peak (the client sends a request every 100ms, and the highest latency shown in the figure is only 10ms), the throughput depends on the number of connections and the client's request frequency. For the server under the thread model, it can keep up with the coroutine model when the number of connections is small, but as the number of connections increases, the switching overhead increases rapidly, leading to a slowing down of the total throughput increase trend. As for Thread-20, the load almost reaches its peak when the number of connections is around 64.
+
+## 2.2 Priority-controlled resource allocation
+
+In computer systems, both CPU and IO resources are always limited. Under such resource constraints, we can prioritize certain services by setting their priority levels. In the context of a TcpServer, we can set the priority levels of each connection in a hierarchical manner to ensure lower latency and reduced latency jitter for certain connections.
+
+Our experiments were conducted on four physical CPUs. The clients sent request messages with a matrix size of 20x20 at a frequency of 50ms. The server was implemented using coroutines. We established 128 connections between the clients and server, divided equally among 8 priority levels, and tested the performance of the connections with different priority levels under different numbers of virtual CPU.
+
+The test results are shown in the figure below, where "x-core" in the legend represents the number of virtual CPU cores allocated to the server. The results indicate that under resource constraints, only connections with higher priority levels (lower priority numbers) are able to achieve higher throughput and lower request latency. With the increase in resource quantity, the system is able to ensure that connections with lower priority levels also achieve higher throughput and lower latency, while still adhering to the requirement that the highest priority level has the highest throughput and lowest latency. Furthermore, we also observed that with the increase in virtual cores, there was a slight performance degradation for high-priority connections. This is due to the increased synchronization and mutual exclusion among poll threads in the scheduler caused by the increase in virtual cores. In the future, this issue can be alleviated by introducing multi-level ready queues.
+
+![](./Article/assets/connect_with_prio.png)
+
+We further analyzed the distribution of message latency for each priority level, as shown in the figure below. This largely conforms to the characteristics of prioritizing high-priority connections in request handling.
+
+![](./Article/assets/connect_with_prio_delay_distribution.png)
+
 1. 用户态和内核态的优先级串口实验。
 2. WebServer实验。
 	1. 协程的切换开销远低于线程。
