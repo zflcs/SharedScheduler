@@ -51,39 +51,60 @@ In traditional multi-core systems, when user processes running on two cores comm
 
 # 3. Design
 
-正如前面提到的问题，以及目前成熟的条件，我们认为也许能够利用协程实现更细力度的任务调度机制，从而减少开销，更好的进行系统资源分配。本文设计了一套以协程为单位的调度系统。它具有以下几个特点：
+正如第一节中描述的，协程调度机制通常用于用户态，无法从系统层面进行管理。如果想让用户态协程调度机制能够最大限度的发挥其优势，必须要与内核提供的异步 IO 机制结合起来，此外内核往往也需要处理如设备读写等异步任务。因此，内核饱受缺乏轻量级的异步任务调度方案的困扰。
 
-1）统一：内核调度与用户态任务调度相统一
+基于目前成熟的条件，我们试图解决上述的困扰。我们将协程引入到内核之中，设计了一套以协程为基本任务的调度系统——共享调度器，从而减少开销，提高系统效率。它具有以下几个特点：
 
-2）共享：内核与用户态通过 vDSO 共享
+1）统一：将协程引入到内核之后，原本需要使用独立的内核线程才能支持的异步 IO 机制现在能够用轻量级的协程来实现，内核之中所有的任务均以协程的形式存在，而用户态的任务同样以协程的形式存在。这种情况下，内核与用户进程的行为高度统一。
 
-3）兼容：与原有多线程模型兼容
+2）共享：一旦引入协程，运行时必不可少，如果使用静态库的形式提供 API，那么每个进程以及内核中都将会存在一份运行时代码，从而造成不必要的内存浪费，因此，我们采用 vDSO 的形式，将内核中的运行时——共享调度器共享给所有用户进程。除此之外，我们定义了优先级调度机制，以共享内存的形式完成对所有进程与内核中协程的优先级的管理。
+
+3）兼容：尽管协程作为基本任务单元，但系统仍然保留了线程相关的系统调用接口，不对原有的系统调用造成影响，能够兼容原来的用户程序。
 
 ## 3.1 System Architecture
 
-系统架构如图所示，我们将协程添加进内核之中，让协程成为任务调度单位。共享调度器被映射到各自的地址空间中，内核以及用户进程完成初始化之后，进入共享调度器的调度代码，根据内部的优先级以及全局优先级完成协程调度。
+![](./Article/assets/archtecture.png)
 
-## 3.2 进程、线程与协程
+系统架构如上图所示，我们提出了使用带有优先级位图的 Executor 数据结构来管理协程，Executor 维护多个优先级协程队列，存在于各自地址空间内，只能通过共享调度器进行维护（图中①③）。内核以 vDSO 的形式将共享调度器共享给所有用户进程。一旦内核以及用户进程完成初始化之后，它们将执行共享调度器，从各自的 Executor 中取出优先级最高的协程执行，并且完成优先级位图的更新。
 
-协程成为任务调度单位，因此进程、线程的概念存在一定变化。首先，需要将内核视为一个特殊的进程，再加上使用双页表机制，陷入内核和返回用户态均需要切换地址空间，因此进程的职责就变得明确，它负责管理地址空间。而线程的职责则发生较大变化，通常情况下，它不与具体任务进行绑定，只循环执行共享调度器的调度代码，只在有需要时，才会与具体的任务绑定起来，线程的职责主要是提供一个运行栈。而协程则是任务单位。
+## 3.2 局部优先级与全局优先级
 
-各个概念的关系已经清晰，而 CPU 在某个时刻，可能属于某个线程或者某个协程，线程与协程之间存在着相互影响的关系，因此我们重新定义了状态转换模型。（详细描述状态转换）
+Rust 语言提供了 Future 特性，而协程则是实现了 Future 特性的闭包，利用其 async 关键字，创建协程与构造普通函数的工作量相差无几。在此基础上，我们对其进行了扩展，增加 ID 用于标识协程，优先级用于调度顺序，我们称之为协程控制块。
 
-引入协程之后，内核进程中的任务完全由协程组成，而传统模型下进程、线程切换只能由一段汇编代码来完成，而这段代码往往没有明确的定义。在新的模型下，进程、线程切换只能通过协程来完成，因此我们定义了一个特殊的内核协程——“切换协程”来负责进程、线程切换，这也帮助明确了进程、线程切换代码的定义。
+首先，我们在 Executor 中维护了一个局部优先级位图以及多个不同优先级的队列，队列中存储着对应优先级的协程 ID，位图中的某位对应着某个优先级队列是否存在就绪协程。创建、调度以及删除协程会对 Executor 数据结构进行修改。在调度时，根据局部优先级位图，按照优先级顺序依次扫描队列，取出最高优先级的就绪协程执行，从而完成进程或内核内部的协程调度。
 
-除此之外，对于用户程序，我们仍然与多线程模型兼容，提供了多线程相关的接口。
+而在各个进程以及内核之间，我们仍然需要优先级来描述其先后顺序，因此需要维护一个全局优先级位图。因为用户进程的所有任务都以协程的形式存在，自然而然地可以想到用进程内部所有协程的最高优先级来表示所属进程的优先级，但这却给维护全局位图却带来了困扰。如果为了安全，可以在内核中扫描所有进程的局部优先级位图，而如果为了快速高效，那么通过共享内存的方式无疑是最快速的方式。我们进行了权衡，最终选择了共享内存的方式。
 
-## 3.3 优先级机制
+## 3.3 进程、线程与协程
 
-详细描述全局优先级与局部优先级，局部优先级由进程自己来维护，而全局优先级由所有的用户进程与内核进程通过共享调度器进行维护。
+引入协程之后，我们将进程、线程与协程的关系进行了梳理。毫无疑问，协程是任务调度单位，而进程、线程的概念则存在一定变化。首先，将内核视为一个特殊的进程，再加上使用双页表机制，陷入内核和返回用户态均需要切换地址空间，因此进程的职责非常明确，它负责管理地址空间。
+
+而线程的职责则发生较大变化，通常情况下，它不与具体任务进行绑定，只循环执行共享调度器的调度代码，这种情况下创建多个线程是为了让同一个进程能够分配到更多的 CPU 资源。而只在有需要时，线程才会与具体的任务绑定起来，因此，线程的职责是提供一个运行栈。
+
+在界定了概念之间的关系之后，仍然存在某些问题需要解决。通过 3.2 节关于优先级的描述，进程内部协程、进程之间以及内核的调度顺序已经十分明了，但我们尚未谈到切换的问题。协程的切换可以由编译器帮助完成，而进程、线程的切换似乎在新的系统中不相协调。为了解决这个问题，我们在内核中定义了一个特殊的协程——切换协程，顾名思义，它专门用于处于内核与进程之间的切换，通常切换代码没有任何的含义，而此举帮助我们明确了这段代码的定义。它将根据全局优先级位图，选出具有最高优先级的进程，并切换到该进程内部的某个线程，进入用户态。
+
+尽管大多数时刻，线程不与特定任务绑定，但仍然存在着某些特殊情况， 某个协程未被执行完毕，这时协程将与线程进行绑定。因此，线程与协程之间存在着相互影响的关系。我们重新定义了状态转换模型。
+
+### 3.3.1 线程内部协程状态转换
+
+当线程处于就绪和阻塞的状态时，其内部协程的状态不会发生变化。只有在线程处于运行状态，协程才会发生状态转换。通常，线程会由于内核执行了某些处理过程，从阻塞态恢复到就绪态时，线程内部的协程所等待的事件也已经处理完毕，此时协程理应处于就绪的状态，因此，需要用某种方式将协程的状态从阻塞转换为就绪态。我们通过用户态中断完成了这个过程，但是，用户态中断唤醒协程目前的实现实际上是新开了一个线程专门执行唤醒的操作，因此，协程状态发生变化还是在线程处于运行的状态。
+
+协程在创建之后进入就绪态，经过调度转变为运行态；在运行时，当前协程可能会因为等待某一事件而进入到阻塞态，也可能因为检测到存在其他优先级而让权，也可能会执行完毕进入退出状态；当协程处于阻塞的状态时，这时只能等待某个事件发生之后被唤醒从而进入就绪的状态。
+
+### 3.3.2 线程状态转换
+
+见上图，它不仅仅描述了线程内部的协程状态模型，同时还描述了线程状态模型以及线程、协程状态转换的相互影响关系。从图中我们可以观察到，线程仍然具有创建、就绪、阻塞、运行和结束五种状态，其状态转换与上述线程内部协程状态转换类似。需要注意的是，尽管从内核的视角看来，造成线程发生状态转移的事件仍然是调度、让权、等待以及唤醒这几类。但是，线程内部的协程状态转换给这几类事件增加了新的起因。因此，造成线程状态变化的原因具体可划分为以下几类：
+1. 与内部协程无关的外部事件。例如，无论内部的协程处于何种状态，都会因为时钟中断被抢占进入就绪态。
+2. 与内部协程相关的外部事件。由于内核执行了某些处理过程，完成了线程内部协程所等待的事件，使得协程需要被重新调度，线程将会从阻塞态转换为就绪态。
+3. 内部协程自身状态变化。一方面是协程主动让权，当上一个执行完毕的协程处于就绪或阻塞态，需要调度下一个协程时，若此时检测出其他进程内存在更高优先级的协程，这时会导致线程让权进入就绪态；另一方面是协程执行过程中产生了异常，导致线程进入阻塞态，等待内核处理异常。
+
+除了在概念以及模型上的变化之外，在实际项目中，我们并未对系统调用的语义做出任何变化，保留了线程相关的系统调用，能够兼容多线程模型的用户程序，并且没有增加开销。
 
 # 4. Implementation
 
-我们在第三节中详细介绍了共享调度器的核心设计思路，而这一节，我们将介绍在实现过程中的细节问题。
+This chapter elaborates some implementation details regarding the shared scheduler.
 
-This chapter discusses some implementation details regarding the shared scheduler.
-
-### 4.1 Global priority and local priority. （放在 design 中）
+<!-- ### 4.1 Global priority and local priority. （放在 design 中）
 
 In the shared scheduler, each process (with the kernel as a special process) maintains a coroutine queue, and each coroutine has its own priority. We consider the highest priority within a process as the priority of this process. Additionally, a global priority array is maintained in the system to record the priorities of all processes. The global priority is used to select the appropriate process for scheduling coroutines. When a process is selected for execution, using `poll` as the entry function will select the highest priority coroutine within that process for execution.coroutine within that process for execution.
 
@@ -93,9 +114,9 @@ It is important to consider the timing of updating local and global priorities. 
 
 - **coroutine spawn**: When a new coroutine is added to the ready queue, it is important to update the local priority bitmap and to check for any changes in the highest priority. If the highest priority has changed, the global priority array should be updated accordingly.
 - **fetch**: When a coroutine is removed from the ready queue, it is important to update the local priority bitmap accordingly. Since the coroutine has not yet started its execution, there is no need to update the global priority array.
-- **re_back**: When a coroutine in pending state is awakened, it is important to check and update the local priority bitmap, and to check for any changes in the highest priority. If the highest priority has changed, the global priority array should be updated accordingly.
+- **re_back**: When a coroutine in pending state is awakened, it is important to check and update the local priority bitmap, and to check for any changes in the highest priority. If the highest priority has changed, the global priority array should be updated accordingly. -->
 
-### 4.2 Asynchronous system calls
+### 4.1 Asynchronous system calls
 
 Synchronous system calls, such as "read", block the entire thread. In a fully asynchronous coroutine programming environment, it is necessary to transform system calls into asynchronous operations to ensure that they only block the current coroutine at most. The support for asynchronous system calls mainly involves two parts: user space and kernel space.
 
@@ -130,7 +151,7 @@ For instance, the following diagram illustrates the entire process of an asynch
 
 ![](./Article/assets/async_syscall.png)
 
-### 4.3 Completely asynchronous scheduling environment
+### 4.2 Completely asynchronous scheduling environment
 
 To achieve better uniformity in coroutine scheduling, we have carried out compatibility adaptations on the previously Unix-like runtime environments in both user mode and kernel mode. We have provided a completely asynchronous scheduling environment for both user and kernel modes.
 
@@ -138,7 +159,7 @@ In user mode, each process will be initialized using the shared scheduler enviro
 
 In kernel mode, the original scheduling task used to schedule user-mode processes is also encapsulated as a kernel scheduling coroutine, which participates in scheduling along with other ordinary kernel coroutines.Since the scheduling of user processes is synchronous, when encapsulating it as a scheduling coroutine, it is necessary to manually block and switch to other kernel coroutines.
 
-### 4.4 How to share scheduler code between kernel and user mode
+### 4.3 How to share scheduler code between kernel and user mode
 
 - 局部优先级和全局优先级。
 - 异步系统调用实现
