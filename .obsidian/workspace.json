@@ -18,6 +18,46 @@
                 "source": false
               }
             }
+          },
+          {
+            "id": "21d9afd4609e88d7",
+            "type": "leaf",
+            "state": {
+              "type": "image",
+              "state": {
+                "file": "Article/assets/async_syscall.png"
+              }
+            }
+          },
+          {
+            "id": "03d5ce5118ad6cba",
+            "type": "leaf",
+            "state": {
+              "type": "image",
+              "state": {
+                "file": "Article/assets/rust_async_model.png"
+              }
+            }
+          },
+          {
+            "id": "4540d6a32dfec8a8",
+            "type": "leaf",
+            "state": {
+              "type": "image",
+              "state": {
+                "file": "Article/assets/archtecture.png"
+              }
+            }
+          },
+          {
+            "id": "7c7b18fe599aab27",
+            "type": "leaf",
+            "state": {
+              "type": "image",
+              "state": {
+                "file": "Article/assets/uintc.png"
+              }
+            }
           }
         ]
       }
@@ -146,25 +186,31 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "switcher:打开快速切换": false,
-      "graph:查看关系图谱": false,
-      "canvas:新建白板": false,
-      "daily-notes:打开/创建今天的日记": false,
-      "templates:插入模板": false,
-      "command-palette:打开命令面板": false
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
     }
   },
   "active": "0de4cede58cecf9a",
   "lastOpenFiles": [
-    "bibtex_ref/uint.md",
+    "bibtex_ref/nativeAIO.md",
     "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
+    "Article/assets/async_syscall.png",
+    "Article/assets/rust_async_model.png",
+    "Article/assets/uintc.png",
+    "Article/assets/archtecture.png",
+    "Article/assets/rust_async_model.drawio.png",
+    "Article/assets/rust_async_model.drawio",
+    "bibtex_ref/uint.md",
     "bibtex_ref/intel-white-paper.md",
     "bibtex_ref/posix-aio.md",
     "bibtex_ref/rust-async.md",
     "bibtex_ref/Pm-aio.md",
     "bibtex_ref/survey.md",
     "bibtex_ref/revisitingcoroutine.md",
-    "bibtex_ref/nativeAIO.md",
     "bibtex_ref/mahbub2020iot.md",
     "bibtex_ref/lee.md",
     "bibtex_ref/IOCP.md",
@@ -174,13 +220,8 @@
     "Article/assets/core1_cwpt.png",
     "Article/assets/core4_cwpt.png",
     "Article/assets/core3_cwpt.png",
-    "Article/assets/core2_cwpt.png",
-    "Article/assets/connect_with_prio.png",
     "~$共享调度器 on qemu性能测试 v2.0.xlsx",
     "README.md",
-    "Article/assets/compare_thread_coroutine.png",
-    "Article/assets/throughput_model_compare.png",
-    "Article/assets/web_server_framework.png",
     "Article/assets/async_syscall.excalidraw.crswap",
     "Article/assets/global&local_prio.excalidraw",
     "Article/assets/async_syscall.excalidraw",
@@ -192,7 +233,6 @@
     "log.md",
     "58E79000",
     "E04E7410",
-    "Article/assets/rust_async_program_model.excalidraw.crswap",
-    "Article/assets/rust_async_program_model.excalidraw"
+    "Article/assets/rust_async_program_model.excalidraw.crswap"
   ]
 }
