@@ -18,7 +18,7 @@ Based on the above situation, we note that both kernel and user space require�
 
 # 2. Relative Work
 
-This chapter will provide a brief introduction to some of the existing technologies and methodologies used in this paper.
+This section will provide a brief introduction to some of the existing technologies and methodologies used in this paper.
 
 #### Async Support In Rust
 
@@ -42,80 +42,104 @@ In traditional multi-core systems, when user processes running on two cores simu
 
 # 3. Design
 
-正如第一节中描述的，协程调度机制通常用于用户态，无法从系统层面进行管理。如果想让用户态协程调度机制能够最大限度的发挥其优势，必须要与内核提供的异步 IO 机制结合起来，此外内核往往也需要处理如设备读写等异步任务。因此，内核饱受缺乏轻量级的异步任务调度方案的困扰。
+As described in section 1, the coroutine scheduling mechanism is typically used in level  and cannot be managed at the system level. The user-level coroutine scheduling mechanism can maximize its advantages only if combined with the asynchronous IO mechanism provided by the kernel. In addition, the kernel often needs to handle asynchronous tasks such as device reading and writing. From these aspects, we can conclude that the kernel suffers from the lack of a lightweight asynchronous task scheduling scheme.
 
-基于目前成熟的条件，我们试图解决上述的困扰。我们将协程引入到内核之中，设计了一套以协程为基本任务的调度系统——共享调度器，从而减少开销，提高系统效率。它具有以下几个特点：
+Based on the existing conditions, we try to solve the above problems. We introduce coroutines into the kernel and use coroutines to complete kernel tasks, which includes asynchronous read and write tasks. As for the scheduling scheme of kernel coroutine and user level coroutine, we design a set of coroutine scheduling scheme across kernel and user processes --- shared-scheduler. We use coroutines to reduce the overhead of threads in traditional asynchronous schemes, and coordinate the scheduling between kernel and user processes by shard-scheduler. The whole scheduling system has the following characteristics: 
 
-1）统一：将协程引入到内核之后，原本需要使用独立的内核线程才能支持的异步 IO 机制现在能够用轻量级的协程来实现，内核之中所有的任务均以协程的形式存在，而用户态的任务同样以协程的形式存在。这种情况下，内核与用户进程的行为高度统一。
-
-2）共享：一旦引入协程，运行时必不可少，如果使用静态库的形式提供 API，那么每个进程以及内核中都将会存在一份运行时代码，从而造成不必要的内存浪费，因此，我们采用 vDSO 的形式，将内核中的运行时——共享调度器共享给所有用户进程。除此之外，我们定义了优先级调度机制，以共享内存的形式完成对所有进程与内核中协程的优先级的管理。
-
-3）兼容：尽管协程作为基本任务单元，但系统仍然保留了线程相关的系统调用接口，不对原有的系统调用造成影响，能够兼容原来的用户程序。
+- Unification: with the introduction of coroutines into kernel, asynchronous IO mechanisms that previously required independent kernel threads to support can now be implemented with lightweight coroutines, where all tasks in kernel exist as coroutines, and user-level tasks also exist as coroutines. In this case, the behavior of  kernel and user processes is highly unified.
+- Sharing: once the coroutine is introduced, the runtime is essential. if the API is provided in the form of a static library, then each process and kernel will have a copy of the runtime code, resulting in unnecessary memory waste. Therefore, we use the vDSO mechanism to share the runtime in the kernel with all user processes. In addition, we define a priority scheduling mechanism to manage the priority of all processes and coroutines in kernel in the form of shared memory.
+- Compatibility: although the coroutine is the basic task unit, the system still retains the thread-related system call interface, which does not affect the original system call and is compatible with the original user program.
 
 ## 3.1 System Architecture
 
-![](./Article/assets/archtecture.png)
+<div>
+    <center>
+    <img src="./Article/assets/archtecture.png"
+         style="zoom:100%"/>
+    <br>		<!--换行-->
+    Figure 2, system architectture. The solid brown line indicates the scheduling that occurs in the system, while the dashed brown line means that the cpu's execution changes.	<!--标题-->
+    </center>
+</div>
 
-系统架构如上图所示，我们提出了使用带有优先级位图的 Executor 数据结构来管理协程，Executor 维护多个优先级协程队列，存在于各自地址空间内，只能通过共享调度器进行维护（图中①③）。内核以 vDSO 的形式将共享调度器共享给所有用户进程。一旦内核以及用户进程完成初始化之后，它们将执行共享调度器，从各自的 Executor 中取出优先级最高的协程执行，并且完成优先级位图的更新。
+The system architecture is shown in figure 2. We propose to use an Executor data structure with a priority bitmap to manage coroutines. The Executor maintains multiple priority coroutine queues, which exist in their own address Spaces and can only be maintained by shared-scheduler, which is represented by ① and ③ in figure 2. The kernel shares the shared-scheduler with all user processes in the way of a vDSO. Once the kernel and user processes are initialized, they execute the shared-scheduler, fetch the highest priority coroutine from their respective Executors to execute, and update the priority bitmap.
 
-## 3.2 局部优先级与全局优先级
+## 3.2 Priority Mechanism
 
-Rust 语言提供了 Future 特性，而协程则是实现了 Future 特性的闭包，利用其 async 关键字，创建协程与构造普通函数的工作量相差无几。在此基础上，我们对其进行了扩展，增加 ID 用于标识协程，优先级用于调度顺序，我们称之为协程控制块。
+To support the priority mechanism, we must extend Rust's coroutine structure. In Rust, the original coroutine structure is a closure that implements the Future feature. On this basis, we extend coroutines structure by adding ID field for identification and priority field for scheduling order, which we call the whole structure coroutine control block.
 
-首先，我们在 Executor 中维护了一个局部优先级位图以及多个不同优先级的队列，队列中存储着对应优先级的协程 ID，位图中的某位对应着某个优先级队列是否存在就绪协程。创建、调度以及删除协程会对 Executor 数据结构进行修改。在调度时，根据局部优先级位图，按照优先级顺序依次扫描队列，取出最高优先级的就绪协程执行，从而完成进程或内核内部的协程调度。
+First, we maintain a local priority bitmap in Executor as well as several queues of different priorities, where the coroutine ids of the corresponding priorities are stored. One of bit in the bitmaps corresponds to whether a ready coroutine exists in a priority queue. The bitmap in Executor will be modified when creating, scheduling and deleting coroutines. When scheduling, the shared-scheduler scans the queue according to the local priority bitmap in the Executor and selects the ready coroutine with the highest priority to execute, thus completing the coroutine scheduling within the process or kernel.
 
-而在各个进程以及内核之间，我们仍然需要优先级来描述其先后顺序，因此需要维护一个全局优先级位图。因为用户进程的所有任务都以协程的形式存在，自然而然地可以想到用进程内部所有协程的最高优先级来表示所属进程的优先级，但这却给维护全局位图却带来了困扰。如果为了安全，可以在内核中扫描所有进程的局部优先级位图，而如果为了快速高效，那么通过共享内存的方式无疑是最快速的方式。我们进行了权衡，最终选择了共享内存的方式。
+However, the order of execution between user processes and kernel needs to be described by a global bitmap. Because all tasks of user processes and kernel exist in the form of coroutines, it is natural to think of using the highest priority of all coroutines within the process to express the priority of the owning process, but this has brought trouble to maintain the global bitmap. For security, the system can scan the local priority bitmap of all processes to matain the global bitmap while entering kernel, but it is very expensive. In contrast, using shared memory is undoubtedly the fastest way, but it is not secure. We made a trade-off between these two approachs, and finally chose the shared memory approach.
 
-## 3.3 进程、线程与协程
+## 3.3 Processes, Threads and Coroutines
 
-引入协程之后，我们将进程、线程与协程的关系进行了梳理。毫无疑问，协程是任务调度单位，而进程、线程的概念则存在一定变化。首先，将内核视为一个特殊的进程，再加上使用双页表机制，陷入内核和返回用户态均需要切换地址空间，因此进程的职责非常明确，它负责管理地址空间。
+After introducing coroutines, we sort out the relationship between process, thread and coroutine. There is no doubt that the coroutine is the task scheduling unit, and the concept of process and thread has a certain change. First of all, if the kernel is treated as a special process, coupled with the two-page-table mechanism, both falling into kernel and returning to user state need to switch the address space, so the process's role is very clear, it is responsible for managing the address space.
 
-而线程的职责则发生较大变化，通常情况下，它不与具体任务进行绑定，只循环执行共享调度器的调度代码，这种情况下创建多个线程是为了让同一个进程能够分配到更多的 CPU 资源。而只在有需要时，线程才会与具体的任务绑定起来，因此，线程的职责是提供一个运行栈。
+The responsibilities of thread change greatly, and usually it is not bound to a specific task, but only loops through the scheduling code of the shared-scheduler, in which case multiple threads are created so that the same process can allocate more CPU resources. Threads are tied to specific tasks only when needed, so the thread's responsibility is to provide a running stack.
 
-在界定了概念之间的关系之后，仍然存在某些问题需要解决。通过 3.2 节关于优先级的描述，进程内部协程、进程之间以及内核的调度顺序已经十分明了，但我们尚未谈到切换的问题。协程的切换可以由编译器帮助完成，而进程、线程的切换似乎在新的系统中不相协调。为了解决这个问题，我们在内核中定义了一个特殊的协程——切换协程，顾名思义，它专门用于处于内核与进程之间的切换，通常切换代码没有任何的含义，而此举帮助我们明确了这段代码的定义。它将根据全局优先级位图，选出具有最高优先级的进程，并切换到该进程内部的某个线程，进入用户态。
+After defining the relationship between them, there are still certain issues that need to be resolved. With the description of priorities in Section 3.2, the scheduling sequence for intra-process coroutines, process, and kernel is clear, but we have not yet addressed the issue of switching. The switching of coroutines can be done with the help of the compiler, while the switching of processes and threads seems to be incompatible in the new system. To solve this problem, we defined a special coroutine in the kernel --- the switching coroutine (SC), which, as the name suggests, is used to switch between the kernel and the process. Usually switching code does not have any meaning, and this helped us clarify the definition of this code. It will select the process with the highest priority according to the global priority bitmap, and switch to a thread inside the process to enter the user mode.
 
-尽管大多数时刻，线程不与特定任务绑定，但仍然存在着某些特殊情况， 某个协程未被执行完毕，这时协程将与线程进行绑定。因此，线程与协程之间存在着相互影响的关系。我们重新定义了状态转换模型。
+Aside from the scheduling and switching issues, the really hard issue is how to build a state transition model that makes the new system compatible with threads. Although most of the time the thread is not bound to a specific task, there are still some special cases where a coroutine has not completed execution, when the thread will be bound to the coroutine. Therefore, this special case should be considered when establishing state transition model. Finally, we built the state transition model shown in figure 3.
 
-### 3.3.1 线程内部协程状态转换
+<div>
+    <center>
+    <img src="./Article/assets/state.png"
+         style="zoom:100%"/>
+    <br>		<!--换行-->
+    Figure 3, state transition model. The solid red lines represent state transitions between threads and interactions between threads and its internal coroutines.	The solid gray lines represent coroutine state transition in thread.<!--标题-->
+    </center>
+</div>
 
-当线程处于就绪和阻塞的状态时，其内部协程的状态不会发生变化。只有在线程处于运行状态，协程才会发生状态转换。通常，线程会由于内核执行了某些处理过程，从阻塞态恢复到就绪态时，线程内部的协程所等待的事件也已经处理完毕，此时协程理应处于就绪的状态，因此，需要用某种方式将协程的状态从阻塞转换为就绪态。我们通过用户态中断完成了这个过程，但是，用户态中断唤醒协程目前的实现实际上是新开了一个线程专门执行唤醒的操作，因此，协程状态发生变化还是在线程处于运行的状态。
+### 3.3.1 Independent state transitions
 
-协程在创建之后进入就绪态，经过调度转变为运行态；在运行时，当前协程可能会因为等待某一事件而进入到阻塞态，也可能因为检测到存在其他优先级而让权，也可能会执行完毕进入退出状态；当协程处于阻塞的状态时，这时只能等待某个事件发生之后被唤醒从而进入就绪的状态。
+The coroutine has five states: create, ready, running, blocked and exit. This state model is similar to the five-state model for threads. Once a coroutine is created, it becomes ready and is going to turns to running state by scheduling. At running time, the current coroutine may become blocked because of waiting for an event, or it may yield due to another coroutine which has higher priority, or it may exit after completed its execution. When the coroutine is blocked, it can only wait for an event to wake up itself to become ready state. Similarly, the state transition model for threads is similar.
 
-### 3.3.2 线程状态转换
+### 3.3.2 Interactional state transitions
 
-见上图，它不仅仅描述了线程内部的协程状态模型，同时还描述了线程状态模型以及线程、协程状态转换的相互影响关系。从图中我们可以观察到，线程仍然具有创建、就绪、阻塞、运行和结束五种状态，其状态转换与上述线程内部协程状态转换类似。需要注意的是，尽管从内核的视角看来，造成线程发生状态转移的事件仍然是调度、让权、等待以及唤醒这几类。但是，线程内部的协程状态转换给这几类事件增加了新的起因。因此，造成线程状态变化的原因具体可划分为以下几类：
-1. 与内部协程无关的外部事件。例如，无论内部的协程处于何种状态，都会因为时钟中断被抢占进入就绪态。
-2. 与内部协程相关的外部事件。由于内核执行了某些处理过程，完成了线程内部协程所等待的事件，使得协程需要被重新调度，线程将会从阻塞态转换为就绪态。
-3. 内部协程自身状态变化。一方面是协程主动让权，当上一个执行完毕的协程处于就绪或阻塞态，需要调度下一个协程时，若此时检测出其他进程内存在更高优先级的协程，这时会导致线程让权进入就绪态；另一方面是协程执行过程中产生了异常，导致线程进入阻塞态，等待内核处理异常。
+The thread and coroutine respectively independent state transitions mentioned above is very clear. Hoever, the state transitions which is caused by the interaction between them are quite obscure. Fortunately, we can easily conclude thay when a thread is ready or blocked, the state of its inner coroutines does not change util the thread is running, shown in figure 3.
 
-除了在概念以及模型上的变化之外，在实际项目中，我们并未对系统调用的语义做出任何变化，保留了线程相关的系统调用，能够兼容多线程模型的用户程序，并且没有增加开销。
+In addition to above obvious conclusion, we can analyze from the type of event that causes the thread state change. Overall, these events are still scheduling, yield, waiting and waking up, but we can divide them into fine-grained categories.
+
+- **External events unrelated to inner coroutines**: for example, no matter what state the inner coroutine is in, thread will be preempted into a ready state due to a clock interrupt.
+- **External events related to inner coroutines**: the event that the thread inner coroutine is waiting has arrived, the waiting coroutine need to be rescheduled, which will result in the thread turn to ready state from blocked state.
+- **Inner coroutine state change**: in this case, the first event that causes thread state changing is the coroutine actively yield. When a coroutine turned to ready or blocked state, and the next coroutine needs to be scheduled, however, if another coroutine with higher priority in other processes is detected at the same time, the thread will be yield to become ready state. Besides, once an exception occurs while a coroutine is running, the thread must be blocked waiting for kernel to handle the exception.
+
+In addition to the conceptual and model changes, in the implementation, we did not make any changes to the semantics of thread-related system calls, the new system can not only take advantage of coroutines, but also be compatible with multi-thread model without additional overhead.
 
 # 4. Implementation
 
-This chapter elaborates some implementation details regarding the shared scheduler.
+After defining the overall architecture of the new system and solving the related problems, we defined an asynchronous software ecosystem. Firstly, we provide APIs for both kernel and user processes. Secondly, we make some adaptation to provide a Completely asynchronous environment. Finally, we make an asynchronous transformation to the IO system call. This section will cover the implementation details in the asynchronous software ecosystem.
 
-<!-- ### 4.1 Global priority and local priority. （放在 design 中）
+### 4.1 Programming APIs
 
-In the shared scheduler, each process (with the kernel as a special process) maintains a coroutine queue, and each coroutine has its own priority. We consider the highest priority within a process as the priority of this process. Additionally, a global priority array is maintained in the system to record the priorities of all processes. The global priority is used to select the appropriate process for scheduling coroutines. When a process is selected for execution, using `poll` as the entry function will select the highest priority coroutine within that process for execution.coroutine within that process for execution.
+We provide the following APIs to achieve more programming convenience.
 
-![](./Article/assets/gloabl&local_prio.png)
+| Function | Description                                  |
+| -------- | -------------------------------------------- |
+| spawn    | Create a new coroutine.                      |
+| get_cid  | Get the current coroutine id.                |
+| wake     | Wake up a specific coroutine.                |
+| reprio   | Adjust the priority of a specific coroutine. |
 
-It is important to consider the timing of updating local and global priorities. The following are some important timing considerations for updating priorities:
+As mentioned in section 3, we used the vDSO mechanism, once a user program uses an interface in the table, the kernel links its symbols while the process is created.
 
-- **coroutine spawn**: When a new coroutine is added to the ready queue, it is important to update the local priority bitmap and to check for any changes in the highest priority. If the highest priority has changed, the global priority array should be updated accordingly.
-- **fetch**: When a coroutine is removed from the ready queue, it is important to update the local priority bitmap accordingly. Since the coroutine has not yet started its execution, there is no need to update the global priority array.
-- **re_back**: When a coroutine in pending state is awakened, it is important to check and update the local priority bitmap, and to check for any changes in the highest priority. If the highest priority has changed, the global priority array should be updated accordingly. -->
+### 4.2 Completely asynchronous scheduling environment
 
-### 4.1 Asynchronous system calls
+To achieve better uniformity in coroutine scheduling, we have carried out compatibility adaptations on the previously Unix-like runtime environments in both user processes and kernel. We have provided a completely asynchronous scheduling environment for both user processes and kernel.
 
-Synchronous system calls, such as "read", block the entire thread. In a fully asynchronous coroutine programming environment, it is necessary to transform system calls into asynchronous operations to ensure that they only block the current coroutine at most. The support for asynchronous system calls mainly involves two parts: user space and kernel space.
+For user processes, it will be initialized using the shared-scheduler environment initialization function. After initialization, the main function of the user program will be encapsulated into an asynchronous coroutine (which is equivalent to a synchronous task that cannot be awaited) and added to the ready queue for unified scheduling. In the end, all tasks in the user process are executed under the scheduling of the shared-scheduler.
 
-#### User Space
+For kernel, the original scheduling task used to schedule user processes is also encapsulated as a kernel scheduling coroutine, which participates in scheduling along with other ordinary kernel coroutines. Since the scheduling of user processes is synchronous, it is necessary to manually block and switch to other kernel coroutines.
 
-The modification of the user space system call interface to support asynchronous calls needs to consider both functional differences and formal consistency. There should be an effort to minimize the differences from synchronous system calls. Additionally, automation should be considered throughout the modification process.
+### 4.3 Asynchronous IO system calls
 
-To enable system calls to support asynchronous features, an `AsyncCall` auxiliary data structure needs to be added, and the Future trait should be implemented for it according to Rust language requirements. After completing this work, the `await` keyword can be used when calling system calls.
+Synchronous IO system calls, such as "read", will block the entire thread. In a fully asynchronous coroutine programming environment, it is necessary to transform system calls into asynchronous operations to ensure that they only block the current coroutine at most. The support for asynchronous IO system calls mainly involves two parts: user space and kernel space.
+
+#### 4.3.1 User Space Modification
+
+The modification of the user space system call interface to support asynchronous calls needs to consider both functional differences and formal consistency. There should be an effort to minimize the differences from synchronous system calls. Additionally, automation should be considered throughout the modification.
+
+To enable system calls to support asynchronous features, an `AsyncCall` auxiliary data structure needs to be added, which shoule implement the Future trait. After completing this work, the `await` keyword can be used when calling the asynchronous system calls.
 
 The formal differences should be minimized as much as possible. We use Rust language procedural macros to generate both synchronous and asynchronous system calls. Finally, synchronous and asynchronous system calls achieve a high degree of consistency in the form, with the only difference being the parameters. The format is shown in the table below.
 
@@ -130,54 +154,37 @@ pub fn write(fd: usize, buffer: &[u8], key: usize, cid: usize) -> isize {
 	sys_write(fd, buffer.as_ptr() as usize, buffer.len(), key, cid) 
 }
 
-read_fd!(fd, buffer, key, current_cid); // async call
-read_fd!(fd, buffer); // sync call
+read!(fd, buffer, key, current_cid); // async call
+read!(fd, buffer); // sync call
 ```
 
-#### Kernel Space
+#### 4.3.2 Kernel Space Modification
 
 In addition to ensuring formal consistency in the user-level system call interface, we also aim for consistency in the kernel system call processing interface. Ultimately, the kernel determines whether to execute synchronous or asynchronous processing logic based on the system call parameters. In the case of asynchronous processing, the kernel uses some method to immediately return the task to user space without waiting for the corresponding processing flow to complete synchronously. Once the kernel completes the corresponding asynchronous processing, it wakes up the corresponding user-level coroutine.
 
-For instance, the following diagram illustrates the entire process of an asynchronous system call for socket read operation. After entering the kernel, if an asynchronous process is executed, the synchronous process in the kernel is encapsulated into a kernel coroutine, which is then added to the kernel executor. The process returns to user space and generates a future to wait for the waking up of the user coroutine that executes the asynchronous system call. The user's executor then switches to execute the next user coroutine. After the asynchronous system call returns to user space, the kernel's processing flow is encapsulated into a coroutine, but it is not executed. The coroutine waits for the network driver to notify the kernel after the data is ready, and then the kernel coroutine is awakened to execute the corresponding processing. Once the kernel finishes the processing (in this case, copying data to the user space buffer), it generates a user space interrupt, passing the ID of the corresponding coroutine to be awakened. The user space interrupt handler then wakes up the corresponding coroutine.
+For instance, the following diagram illustrates the entire workflow of an asynchronous system call for socket read operation. After entering the kernel, the operations that were originally done synchronously by kernel will be encapsulated into a kernel coroutine, which is then added to the kernel Executor. Then it immediately returns to user space and generates a future to wait for the waking up of the user coroutine that executes the asynchronous system call. At this time, the shared-scheduler will switches to execute the next user coroutine. After the asynchronous system call returns to user space, the kernel coroutine which encapsulates related operations is not executed. The kernel coroutine waits for the network driver to notify the kernel after the data is ready, and then the kernel coroutine is awakened to execute the corresponding operations. Once the kernel finishes the workflow (in this case, copying data to the user space buffer), it generates a user space interrupt, passing the ID of the corresponding user coroutine to be awakened. The user space interrupt handler then wakes up the corresponding coroutine.
 
 ![](./Article/assets/async_syscall.png)
 
-### 4.2 Completely asynchronous scheduling environment
 
-To achieve better uniformity in coroutine scheduling, we have carried out compatibility adaptations on the previously Unix-like runtime environments in both user mode and kernel mode. We have provided a completely asynchronous scheduling environment for both user and kernel modes.
 
-In user mode, each process will be initialized using the shared scheduler environment initialization function. After initialization, the main function provided by the user program will be encapsulated into an asynchronous coroutine (which is equivalent to a synchronous task that cannot be awaited) and added to the ready queue for unified scheduling. In the end, all tasks in user mode are executed under the scheduling of the shared scheduler.
-
-In kernel mode, the original scheduling task used to schedule user-mode processes is also encapsulated as a kernel scheduling coroutine, which participates in scheduling along with other ordinary kernel coroutines.Since the scheduling of user processes is synchronous, it is necessary to manually block and switch to other kernel coroutines.
-
-### 4.3 How to share scheduler code between kernel and user mode
-
-- 局部优先级和全局优先级。
-- 异步系统调用实现
-  - 接口改造
-  - 异步系统调用的唤醒机制实现（结合用户态中断）。
-- 兼容性实现
-  - 用户态的代码入口为调度器初始化代码，为用户提供完全异步的环境。
-  - 内核态的线程调度和协程调度的统一。
-- 模块化调度器，用vdso在用户态和内核态复用了同一套调度代码。
-
-# 4. Performance Evaluation
+# 5. Performance Evaluation
 
 To demonstrate the lower switching overhead of coroutine programming model compared to thread programming model, we constructed two different TcpServer models using coroutine and thread respectively to test the server's throughput, message latency, and latency jitter.
 
 In addition, we will demonstrate the significant role of priority in ensuring the real-time performance of certain specific tasks under limited resources by analyzing the impact of coroutine priority on task throughput, message latency, and latency jitter in the TcpServer experiment.
 
-We implemented the shared scheduler based on rCore, which is a small operating system almost entirely written in Rust, characterized by its compactness and efficiency. It can also fully leverage Rust's support for asynchronous programming to quickly implement the shared scheduler.(需要介绍用户态中断的硬件环境)
+We implemented the shared-scheduler based on rCore, which is a small operating system almost entirely written in Rust, characterized by its compactness and efficiency. It can also fully leverage Rust's support for asynchronous programming to quickly implement the shared-scheduler.
 
- The Msg Sender in the client periodically sends a certain length of data to the server, while the Msg Recv in the client receives the server's response, calculates the response latency, and waits for the timer to expire before sending the next request. Each connection in the server consists of three components:
+The Msg Sender in the client periodically sends a certain length of data to the server, while the Msg Recv in the client receives the server's response, calculates the response latency, and waits for the timer to expire before sending the next request. Each connection in the server consists of three components:
 
-- Msg Recv, which receives requests from the client and stores them in the request queue..
-- Msg Server, which takes messages from the request message queue, performs matrix operations, and sends the results to the response message queue.
-- Msg Sender, which takes responses from the response message queue and send them to the client.
+- **Msg Recv**, which receives requests from the client and stores them in the request queue.
+- **Msg Server**, which takes messages from the request message queue, performs matrix operations, and sends the results to the response message queue.
+- **Msg Sender**, which takes responses from the response message queue and send them to the client.
 
 These three components transfer data through the shared message buffers.
 
-## 4.1 Coroutine programming model vs. thread programming model
+## 5.1 Coroutine programming model vs. thread programming model
 
 To evaluate the advantages and disadvantages of the coroutine and thread programming models, as well as the switching overhead between them, we implemented the three components of the Server Process using the thread model and the coroutine model respectively. We represent the test results for processing 1 × 1 matrix requests in the thread model as Thread-1, and the test results for processing 20 × 20 matrix requests in the coroutine model as Coroutine-20. Similarly, the other results are represented accordingly. The experiments were conducted on 4 physical CPUs, with the server allocating 4 virtual CPUs. The timeout period set by the client's timer is 100ms.
 
@@ -187,7 +194,7 @@ The test results for message latency are shown in the following figure. As can
 
 The figure also shows the test results of the total throughput for different matrix request sizes under different models. It can be seen that the total throughput of the server under the coroutine model increases linearly with the increase of the number of connections, even when the matrix request size increases. Since the load has not reached the peak (the client sends a request every 100ms, and the highest latency shown in the figure is only 10ms), the throughput depends on the number of connections and the client's request frequency. For the server under the thread model, it can keep up with the coroutine model when the number of connections is small, but as the number of connections increases, the switching overhead increases rapidly, leading to a slowing down of the total throughput increase trend. As for Thread-20, the load almost reaches its peak when the number of connections is around 64.
 
-## 2.2 Priority-controlled resource allocation
+## 5.2 Priority-controlled resource allocation
 
 In computer systems, both CPU and IO resources are always limited. Under such resource constraints, we can prioritize certain services by setting their priority levels. In the context of a TcpServer, we can set the priority levels of each connection in a hierarchical manner to ensure lower latency and reduced latency jitter for certain connections.
 
@@ -202,7 +209,7 @@ We further analyzed the distribution of message latency for each priority lev
 ![](./Article/assets/connect_with_prio_delay_distribution.png)
 
 
-# 5. Conclusion
+# 6. Conclusion
 
 In this paper, we propose a general and user/kernel-space shared asynchronous scheduling framework called the shared scheduler. We introduce the concept of coroutine into the kernel as a scheduling unit, reducing context switching overhead and improving system resource utilization. And we have designed an $O(1)$ complexity priority scheduling algorithm based on the priority of each coroutine. Finally, we implement asynchronous system calls using user-space interrupts to reduce the overhead of kernel-space context switching. In the scenario of TcpServer, the server implemented by the shared scheduler exhibits lower context switching overhead and higher resource utilization.
 
