@@ -8,44 +8,14 @@
         "type": "tabs",
         "children": [
           {
-            "id": "0de4cede58cecf9a",
+            "id": "4540d6a32dfec8a8",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "log.md",
+                "file": "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
                 "mode": "source",
                 "source": false
-              }
-            }
-          },
-          {
-            "id": "21d9afd4609e88d7",
-            "type": "leaf",
-            "state": {
-              "type": "image",
-              "state": {
-                "file": "Article/assets/async_syscall.png"
-              }
-            }
-          },
-          {
-            "id": "03d5ce5118ad6cba",
-            "type": "leaf",
-            "state": {
-              "type": "image",
-              "state": {
-                "file": "Article/assets/rust_async_model.png"
-              }
-            }
-          },
-          {
-            "id": "4540d6a32dfec8a8",
-            "type": "leaf",
-            "state": {
-              "type": "image",
-              "state": {
-                "file": "Article/assets/archtecture.png"
               }
             }
           },
@@ -53,9 +23,11 @@
             "id": "7c7b18fe599aab27",
             "type": "leaf",
             "state": {
-              "type": "image",
+              "type": "markdown",
               "state": {
-                "file": "Article/assets/uintc.png"
+                "file": "log.md",
+                "mode": "source",
+                "source": false
               }
             }
           }
@@ -133,7 +105,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "log.md",
+                "file": "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -150,7 +122,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "log.md",
+                "file": "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -173,7 +145,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "log.md"
+                "file": "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md"
               }
             }
           }
@@ -194,16 +166,17 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "0de4cede58cecf9a",
+  "active": "4540d6a32dfec8a8",
   "lastOpenFiles": [
-    "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
     "log.md",
+    "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
+    "Article/assets/archtecture.png",
+    "Article/assets/rust_async_model.png",
+    "Article/assets/async_syscall.png",
+    "SharedScheduler.pdf",
+    "Article/assets/uintc.png",
     "README.md",
     "bibtex_ref/nativeAIO.md",
-    "Article/assets/async_syscall.png",
-    "Article/assets/rust_async_model.png",
-    "Article/assets/uintc.png",
-    "Article/assets/archtecture.png",
     "Article/assets/rust_async_model.drawio.png",
     "Article/assets/rust_async_model.drawio",
     "bibtex_ref/uint.md",
@@ -227,7 +200,6 @@
     "Article/assets/global&local_prio.excalidraw",
     "Article/assets/async_syscall.excalidraw",
     "bibtex_ref/memif.md",
-    "SharedScheduler.pdf",
     "bibtex_ref/LXDs.md",
     "bibtex_ref/epoll.md",
     "bibtex_ref",
