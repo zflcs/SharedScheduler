@@ -8,7 +8,7 @@
         "type": "tabs",
         "children": [
           {
-            "id": "4540d6a32dfec8a8",
+            "id": "7c7b18fe599aab27",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -20,7 +20,7 @@
             }
           },
           {
-            "id": "7c7b18fe599aab27",
+            "id": "3cf477a78b181ec9",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -166,16 +166,18 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "4540d6a32dfec8a8",
+  "active": "7c7b18fe599aab27",
   "lastOpenFiles": [
     "log.md",
     "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
+    "README.md",
+    "ppt.pdf",
+    "bibtex_ref/revisitingcoroutine.md",
     "Article/assets/archtecture.png",
     "Article/assets/rust_async_model.png",
     "Article/assets/async_syscall.png",
     "SharedScheduler.pdf",
     "Article/assets/uintc.png",
-    "README.md",
     "bibtex_ref/nativeAIO.md",
     "Article/assets/rust_async_model.drawio.png",
     "Article/assets/rust_async_model.drawio",
@@ -185,7 +187,6 @@
     "bibtex_ref/rust-async.md",
     "bibtex_ref/Pm-aio.md",
     "bibtex_ref/survey.md",
-    "bibtex_ref/revisitingcoroutine.md",
     "bibtex_ref/mahbub2020iot.md",
     "bibtex_ref/lee.md",
     "bibtex_ref/IOCP.md",
@@ -204,7 +205,6 @@
     "bibtex_ref/epoll.md",
     "bibtex_ref",
     "58E79000",
-    "E04E7410",
-    "Article/assets/rust_async_program_model.excalidraw.crswap"
+    "E04E7410"
   ]
 }
