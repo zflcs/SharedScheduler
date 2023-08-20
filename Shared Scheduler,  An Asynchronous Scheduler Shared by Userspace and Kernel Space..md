@@ -44,44 +44,40 @@ We have designed a simple network scenario where multiple clients need to send a
 
 We have observed that due to the coarse granularity of kernel thread resources, IO multiplexing chooses to aggregate multiple IO listening events into a single thread, which inevitably leads to event dispatching. To fundamentally address this issue, we introduce coroutines with finer resource granularity into the kernel, making them the smallest units for listening to IO ports and participating in unified kernel scheduling. Kernel coroutines correspond one-to-one with user coroutines, thereby eliminating the necessity for event dispatching at its core.
 
-<!-- 
-#### Async Support In Rust
 
-In its early stages, Rust supported stackful coroutines. However, to better address issues related to memory leaks and debugging, Rust discontinued support for [stackful coroutines in version 1.0 and instead adopted an asynchronous programming model based on async/await](./bibtex_ref/rust-async). Starting in 2018, Rust began supporting stackless coroutines in its nightly version. In this article, all references to coroutines refer to stackless coroutines.
 
-The Rust compiler has the capability to transform asynchronous functions into coroutines. By using the async/await syntax, the compiler can expand an asynchronous function into a state machine that suspends when the asynchronous operation is not complete and resumes when it is completed. This transformation is performed at compile time, ensuring both efficiency and safety at runtime.
+#### <!--Async Support In Rust-->
 
-It is worth to note that Rust compiler does not provide an asynchronous runtime, but only provides abstractions such as Future for task management, Waker for asynchronous wakeups, and async/await syntax for transforming functions into state machines. Third-party libraries often leverage these abstractions provided by Rust to implement their own asynchronous runtimes.
+<!--In its early stages, Rust supported stackful coroutines. However, to better address issues related to memory leaks and debugging, Rust discontinued support for [stackful coroutines in version 1.0 and instead adopted an asynchronous programming model based on async/await](./bibtex_ref/rust-async). Starting in 2018, Rust began supporting stackless coroutines in its nightly version. In this article, all references to coroutines refer to stackless coroutines.-->
 
-![](./Article/assets/rust_async_model.png)
+<!--The Rust compiler has the capability to transform asynchronous functions into coroutines. By using the async/await syntax, the compiler can expand an asynchronous function into a state machine that suspends when the asynchronous operation is not complete and resumes when it is completed. This transformation is performed at compile time, ensuring both efficiency and safety at runtime.-->
 
-The Rust asynchronous programming model is illustrated in Figure 1.2. First, the user creates a task and adds it to the global task queue. Then, worker threads in the Executor continuously fetch tasks from the task queue and execute them, creating a waker to maintain the task's execution status. When a task needs to wait for an asynchronous event, the waker is placed in the corresponding Reactor for the message and the worker thread executes other tasks. When the asynchronous event arrives in the Reactor, it finds the corresponding waker and uses the wake operation to re-add the corresponding blocking task to the task queue.
+<!--It is worth to note that Rust compiler does not provide an asynchronous runtime, but only provides abstractions such as Future for task management, Waker for asynchronous wakeups, and async/await syntax for transforming functions into state machines. Third-party libraries often leverage these abstractions provided by Rust to implement their own asynchronous runtimes.-->
 
-#### User-Space Interrupt Support
+<!--![](./Article/assets/rust_async_model.png)-->
 
-In traditional operating systems, signals are often transmitted between processes through the kernel. The sending process needs to enter kernel mode to attach the signal to the receiving process, and the performance overhead caused by the privilege level switch can lead to low efficiency. The receiving process often needs to wait until the next scheduling to respond to the signal, which means that the signal cannot be responded to in a timely manner, resulting in high latency. The emergence of user-space interrupt technology has made efficient signal transmission possible.
+<!--The Rust asynchronous programming model is illustrated in Figure 1.2. First, the user creates a task and adds it to the global task queue. Then, worker threads in the Executor continuously fetch tasks from the task queue and execute them, creating a waker to maintain the task's execution status. When a task needs to wait for an asynchronous event, the waker is placed in the corresponding Reactor for the message and the worker thread executes other tasks. When the asynchronous event arrives in the Reactor, it finds the corresponding waker and uses the wake operation to re-add the corresponding blocking task to the task queue.-->
 
-The term "interrupt" has traditionally been used to describe signals that originate from hardware and are processed in the kernel. Even the software interrupts we commonly use (i.e., signals generated by software) are also processed in the kernel. However, in recent years, a design has emerged that allows tasks in user space to send interrupt signals to each other without going through the kernel, and to process them in user space directly. In 2020, Intel introduced the [x86 user-space interrupt feature](./bibtex_ref/intel-white-paper) in the Sapphire Rapids processor, and in 2021, Linux submitted code for user-space interrupt support in an [RFC patch](./bibtex_ref/uint). Taking user-space signal transmission as an example, we analyze the advantages of user-space interrupts.
+#### <!--User-Space Interrupt Support-->
 
-In traditional multi-core systems, when user processes running on two cores simultaneously communicate through signals, the sending process needs to enter the kernel to insert the signal into the signal queue of the receiving process, and wait for the receiving process to respond to the signal until it is next scheduled. However, in multi-core systems that support user-space interrupts, the sending process can directly send signals to the receiving process through a hardware interface, and the receiving process can respond immediately when scheduled on the core. In the best case scenario (i.e., when both the sender and receiver are both running on different cores), signal transmission in user-space interrupts does not require entering the kernel, and the receiving end can respond immediately.
- -->
+<!--In traditional operating systems, signals are often transmitted between processes through the kernel. The sending process needs to enter kernel mode to attach the signal to the receiving process, and the performance overhead caused by the privilege level switch can lead to low efficiency. The receiving process often needs to wait until the next scheduling to respond to the signal, which means that the signal cannot be responded to in a timely manner, resulting in high latency. The emergence of user-space interrupt technology has made efficient signal transmission possible.-->
+
+<!--The term "interrupt" has traditionally been used to describe signals that originate from hardware and are processed in the kernel. Even the software interrupts we commonly use (i.e., signals generated by software) are also processed in the kernel. However, in recent years, a design has emerged that allows tasks in user space to send interrupt signals to each other without going through the kernel, and to process them in user space directly. In 2020, Intel introduced the [x86 user-space interrupt feature](./bibtex_ref/intel-white-paper) in the Sapphire Rapids processor, and in 2021, Linux submitted code for user-space interrupt support in an [RFC patch](./bibtex_ref/uint). Taking user-space signal transmission as an example, we analyze the advantages of user-space interrupts.-->
+
+<!--In traditional multi-core systems, when user processes running on two cores simultaneously communicate through signals, the sending process needs to enter the kernel to insert the signal into the signal queue of the receiving process, and wait for the receiving process to respond to the signal until it is next scheduled. However, in multi-core systems that support user-space interrupts, the sending process can directly send signals to the receiving process through a hardware interface, and the receiving process can respond immediately when scheduled on the core. In the best case scenario (i.e., when both the sender and receiver are both running on different cores), signal transmission in user-space interrupts does not require entering the kernel, and the receiving end can respond immediately.-->
+
 # 3. Design
 
-In this section, we will introduce a kernel design scheme suitable for highly concurrent, asynchronous scenarios. It builds and improves on the traditional multi-process, multi-threaded model by replacing the task unit with a more lightweight coroutine, and bring it into the kernel to replace the responsibilities of the original thread. The design has the following four key enabling techniques, i.e., using coroutine control blocks to describe basic task units (Section 3.1), weaking the concept of thread and constructing  a coroutine state transition model (Section 3.2), using kernel coroutines (section 3.3), harmonizing task scheduling between the kernel and user processes by share schedulers (section 3.3). 
-
-
-
-
+In this section, we will introduce a kernel design scheme suitable for highly concurrent, asynchronous scenarios. It builds and improves on the traditional multi-process, multi-threaded model by replacing the task unit with a more lightweight coroutine, and bring it into the kernel to replace the responsibilities of the original thread. The design has the following four key enabling techniques, i.e., using coroutine control blocks to describe basic task units (Section 3.1), weaking the concept of thread and constructing  a coroutine state transition model (Section 3.2), using kernel coroutines (section 3.3), harmonizing task scheduling between the kernel and user processes by share schedulers (section 3.3).  Figure 1 shows the overall architecture of over design.
 
 <div>
     <center>
     <img src="./Article/assets/archtecture.png"
-         style="zoom:100%"/>
+         style="zoom:50%"/>
     <br>		<!--换行-->
-    Figure 2, system architectture. The solid brown line indicates the scheduling that occurs in the system, while the dashed brown line means that the cpu's execution changes.	<!--标题-->
+    Figure 1, system architecture overview.
     </center>
 </div>
-
 
 
 ### 3.1 Coroutine Control Block
@@ -119,6 +115,7 @@ The importation of coroutines into multi-process and multi-thread models will in
     Figure 3, Coroutine state transition model. 	<!--标题-->
     </center>
 </div>
+
 
 ### 3.3 Kernel Coroutine
 
