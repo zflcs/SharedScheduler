@@ -8,7 +8,7 @@
         "type": "tabs",
         "children": [
           {
-            "id": "0de4cede58cecf9a",
+            "id": "7c7b18fe599aab27",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -20,42 +20,14 @@
             }
           },
           {
-            "id": "21d9afd4609e88d7",
+            "id": "3cf477a78b181ec9",
             "type": "leaf",
             "state": {
-              "type": "image",
+              "type": "markdown",
               "state": {
-                "file": "Article/assets/async_syscall.png"
-              }
-            }
-          },
-          {
-            "id": "03d5ce5118ad6cba",
-            "type": "leaf",
-            "state": {
-              "type": "image",
-              "state": {
-                "file": "Article/assets/rust_async_model.png"
-              }
-            }
-          },
-          {
-            "id": "4540d6a32dfec8a8",
-            "type": "leaf",
-            "state": {
-              "type": "image",
-              "state": {
-                "file": "Article/assets/archtecture.png"
-              }
-            }
-          },
-          {
-            "id": "7c7b18fe599aab27",
-            "type": "leaf",
-            "state": {
-              "type": "image",
-              "state": {
-                "file": "Article/assets/uintc.png"
+                "file": "log.md",
+                "mode": "source",
+                "source": false
               }
             }
           }
@@ -194,14 +166,19 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "0de4cede58cecf9a",
+  "active": "7c7b18fe599aab27",
   "lastOpenFiles": [
-    "bibtex_ref/nativeAIO.md",
+    "SharedScheduler.pdf",
     "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
-    "Article/assets/async_syscall.png",
-    "Article/assets/rust_async_model.png",
-    "Article/assets/uintc.png",
+    "log.md",
+    "README.md",
+    "ppt.pdf",
+    "bibtex_ref/revisitingcoroutine.md",
     "Article/assets/archtecture.png",
+    "Article/assets/rust_async_model.png",
+    "Article/assets/async_syscall.png",
+    "Article/assets/uintc.png",
+    "bibtex_ref/nativeAIO.md",
     "Article/assets/rust_async_model.drawio.png",
     "Article/assets/rust_async_model.drawio",
     "bibtex_ref/uint.md",
@@ -210,7 +187,6 @@
     "bibtex_ref/rust-async.md",
     "bibtex_ref/Pm-aio.md",
     "bibtex_ref/survey.md",
-    "bibtex_ref/revisitingcoroutine.md",
     "bibtex_ref/mahbub2020iot.md",
     "bibtex_ref/lee.md",
     "bibtex_ref/IOCP.md",
@@ -221,18 +197,14 @@
     "Article/assets/core4_cwpt.png",
     "Article/assets/core3_cwpt.png",
     "~$共享调度器 on qemu性能测试 v2.0.xlsx",
-    "README.md",
     "Article/assets/async_syscall.excalidraw.crswap",
     "Article/assets/global&local_prio.excalidraw",
     "Article/assets/async_syscall.excalidraw",
     "bibtex_ref/memif.md",
-    "SharedScheduler.pdf",
     "bibtex_ref/LXDs.md",
     "bibtex_ref/epoll.md",
     "bibtex_ref",
-    "log.md",
     "58E79000",
-    "E04E7410",
-    "Article/assets/rust_async_program_model.excalidraw.crswap"
+    "E04E7410"
   ]
 }
