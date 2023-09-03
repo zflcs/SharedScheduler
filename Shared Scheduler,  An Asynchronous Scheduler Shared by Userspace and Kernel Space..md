@@ -26,9 +26,9 @@ In order to enhance the performance of I/O-intensive applications, such as netwo
 
 ## 2.1 Coroutine
 
-Coroutine is a lightweight concurrency programming technique that enables cooperative scheduling of multiple execution flows within a single kernel thread. Compared to traditional kernel threads or processes, coroutines have lower resource overhead and higher execution efficiency. Coroutines can be seen as user-level threads that are actively controlled by programmers for scheduling and context switching. Modern programming languages such as C++20, Go, Rust, Python, Kotlin, etc., offer varying degrees of support for coroutines. In order to strike a balance between usability, safety, and performance, we compared the support for coroutines in Rust and Go programming languages within the kernel.
+Coroutine is a lightweight concurrency programming technique that enables cooperative scheduling of multiple execution flows within a single kernel thread. Compared to traditional kernel threads or processes, coroutines have lower resource overhead and higher execution efficiency. Coroutines can be seen as user-level threads that are actively controlled by programmers for scheduling and context switching. Modern programming languages such as[ C++20](./bibtex_ref/cpp-coroutine), [Go](./bibtex_ref/goroutine), [Rust](./bibtex_ref/rust-async), [Python](./bibtex_ref/python-coroutine), [Kotlin](./bibtex_ref/kotlin-coroutine), etc., offer varying degrees of support for coroutines. In order to strike a balance between usability, safety, and performance, we compared the support for coroutines in Rust and Go programming languages within the kernel.
 
-Goroutine is a coroutine implementation in the Go programming language, based on the stackful coroutine model. Goroutine simplifies and enhances concurrent programming, allowing for a large number of concurrent executions within a single kernel thread. In the Go language, Goroutines are created using the "go" keyword followed by a function call. This function call runs concurrently with other Goroutines in the same address space. Goroutines have their own stack space, which is dynamically allocated and managed by the Go runtime. This stack space enables Goroutines to have independent execution contexts, including local variables and function calls.
+[Goroutine](./bibtex_ref/goroutine) is a coroutine implementation in the Go programming language, based on the stackful coroutine model. Goroutine simplifies and enhances concurrent programming, allowing for a large number of concurrent executions within a single kernel thread. In the Go language, Goroutines are created using the "go" keyword followed by a function call. This function call runs concurrently with other Goroutines in the same address space. Goroutines have their own stack space, which is dynamically allocated and managed by the Go runtime. This stack space enables Goroutines to have independent execution contexts, including local variables and function calls.
 
 Coroutines in the Rust language are implemented through the async/await syntax, the async keyword, and the corresponding runtime library. Compared to goroutines, Rust coroutines are implemented as stackless coroutines, which do not require pre-allocated fixed-sized stack space. Instead, the stack space for coroutines is dynamically allocated and deallocated as needed. This allows coroutines to be created and destroyed very lightweightly and efficiently. Furthermore, thanks to the rigorous checking mechanisms of the Rust compiler, Rust coroutines also possess significant advantages in terms of memory safety. These are two reasons why we prefer Rust coroutines.
 
@@ -176,7 +176,7 @@ The formal differences should be minimized as much as possible. We use Rust lang
 
 ```rust
 #[async_fn(true)] 
-pub fn read(fd: usize, buffer: &mut [u8], key: usize, cid: usize) -> isize {
+pub fn read(socfd: usize, buffer: &mut [u8], key: usize, cid: usize) -> isize {
 	sys_read(fd, buffer.as_mut_ptr() as usize, buffer.len(), key, cid) 
 }
 
@@ -207,11 +207,11 @@ In addition, we will demonstrate the significant role of priority in ensuring th
 
 We implemented the shared-scheduler based on rCore, which is a small operating system almost entirely written in Rust, characterized by its compactness and efficiency. It can also fully leverage Rust's support for asynchronous programming to quickly implement the shared-scheduler.
 
-The Msg Sender in the client periodically sends a certain length of data to the server, while the Msg Recv in the client receives the server's response, calculates the response latency, and waits for the timer to expire before sending the next request. Each connection in the server consists of three components:
+The Msg Send stage in the client periodically sends a certain length of data to the server, while the Msg Recv in the client receives the server's response, calculates the response latency, and waits for the timer to expire before sending the next request. Each connection in the server consists of three components:
 
 - **Msg Recv**, which receives requests from the client and stores them in the request queue.
-- **Msg Server**, which takes messages from the request message queue, performs matrix operations, and sends the results to the response message queue.
-- **Msg Sender**, which takes responses from the response message queue and send them to the client.
+- **Req Handler**, which takes messages from the request message queue, performs matrix operations, and sends the results to the response message queue.
+- **Msg Send**, which takes responses from the response message queue and send them to the client.
 
 These three components transfer data through the shared message buffers.
 
