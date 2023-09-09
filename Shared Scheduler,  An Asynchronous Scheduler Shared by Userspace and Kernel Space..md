@@ -176,7 +176,7 @@ The formal differences should be minimized as much as possible. We use Rust lang
 
 ```rust
 #[async_fn(true)] 
-pub fn read(socfd: usize, buffer: &mut [u8], key: usize, cid: usize) -> isize {
+pub fn read(fd: usize, buffer: &mut [u8], key: usize, cid: usize) -> isize {
 	sys_read(fd, buffer.as_mut_ptr() as usize, buffer.len(), key, cid) 
 }
 
@@ -185,8 +185,8 @@ pub fn write(fd: usize, buffer: &[u8], key: usize, cid: usize) -> isize {
 	sys_write(fd, buffer.as_ptr() as usize, buffer.len(), key, cid) 
 }
 
-read!(fd, buffer, key, current_cid); // async call
-read!(fd, buffer); // sync call
+read!(socked_fd, buffer, key, current_cid); // async call
+read!(socked_fd, buffer); // sync call
 ```
 
 #### 4.3.2 Kernel Space Modification
