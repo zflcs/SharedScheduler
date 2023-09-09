@@ -31,8 +31,7 @@
               }
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -106,7 +105,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "log.md",
+                "file": "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -123,7 +122,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "log.md",
+                "file": "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -146,7 +145,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "log.md"
+                "file": "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md"
               }
             }
           }
@@ -167,10 +166,12 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "593b386b804efd74",
+  "active": "9339c2bf6e1fe6d4",
   "lastOpenFiles": [
-    "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
+    "Article/assets/Async_Syscall.png",
     "log.md",
+    "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..md",
+    "Article/assets/async_syscall.png",
     "Shared Scheduler,  An Asynchronous Scheduler Shared by Userspace and Kernel Space..pdf",
     "ppt.pdf",
     "bibtex_ref/kotlin-coroutine.md",
@@ -187,7 +188,6 @@
     "bibtex_ref/revisitingcoroutine.md",
     "Article/assets/archtecture.png",
     "Article/assets/rust_async_model.png",
-    "Article/assets/async_syscall.png",
     "Article/assets/uintc.png",
     "bibtex_ref/nativeAIO.md",
     "Article/assets/rust_async_model.drawio.png",
@@ -203,7 +203,6 @@
     "Article/assets/connect_with_prio.png",
     "Article/assets/core1_cwpt.png",
     "Article/assets/core4_cwpt.png",
-    "Article/assets/core3_cwpt.png",
     "~$共享调度器 on qemu性能测试 v2.0.xlsx",
     "Article/assets/async_syscall.excalidraw.crswap",
     "Article/assets/global&local_prio.excalidraw",
