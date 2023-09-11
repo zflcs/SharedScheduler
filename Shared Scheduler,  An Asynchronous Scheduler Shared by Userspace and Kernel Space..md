@@ -2,6 +2,8 @@
 
 As a classical concurrency model, multi-threading technology has been widely supported by numerous operating systems and extensively applied in various application programs. However, as concurrency increases, the high system overhead and context-switching costs of multi-threading model have gradually become unacceptable. As a result, user-level threads have emerged, but they often only have been supported by user-level  and are not recognized by the operating system, which led to the inability of the kernel to  estimate the workload of coroutine tasks in the system accurately to perform more precise scheduling strategy to achieve higher system resource utilization. Based on the above situation, we propose the Shared Scheduler with the following characteristics: 1) It introduces the coroutine control block that allows both the kernel and applications to be aware of the coroutine's state, serving as the fundamental unit for kernel scheduling. 2) It introduces the concept of priorities within coroutines and designed a unified set of priority-based scheduling algorithms for both user-level and kernel-level coordination.  Finally, we analyzed the characteristics of the Shared Scheduler on QEMU and FPGA platforms, concluding that the coroutine scheduling algorithms has advantages in terms of switch overhead and granularity of resource utilization control.
 
+
+
 # 1. Introduction
 
 In the early days, operating systems introduced the abstraction of processes to meet the concurrency and isolation requirements of multiprogramming. However, due to the large resource granularity of processes and the high cost of inter-process communication, operating systems proposed the abstraction of threads as the basic scheduling unit. Threads share the same address space, enabling efficient communication among them. With the rapid increase in concurrency, the use of threads as concurrency units has gradually become unacceptable in terms of resource utilization. As of 2022, Google's servers are [handling 893 billion requests per day](./bibtex_ref/google10search), with an average of 8 million requests per second, posing a great challenge for both hardware and software. Handling such a large number of asynchronous requests cannot be supported solely by threads. In addition, as resource-constrained embedded devices become [increasingly commonplace in various fields](./bibtex_ref/mahbub2020iot) such as agriculture, education, and healthcare, the abstraction of threads still appears somewhat bloated in such devices. In scenarios with high concurrency or resource constraints, the industry has provided some solutions in both operating systems and programming languages. 
@@ -66,9 +68,11 @@ We have observed that due to the coarse granularity of kernel thread resources, 
 
 <!--In traditional multi-core systems, when user processes running on two cores simultaneously communicate through signals, the sending process needs to enter the kernel to insert the signal into the signal queue of the receiving process, and wait for the receiving process to respond to the signal until it is next scheduled. However, in multi-core systems that support user-space interrupts, the sending process can directly send signals to the receiving process through a hardware interface, and the receiving process can respond immediately when scheduled on the core. In the best case scenario (i.e., when both the sender and receiver are both running on different cores), signal transmission in user-space interrupts does not require entering the kernel, and the receiving end can respond immediately.-->
 
+
+
 # 3. Design
 
-In this section, we will introduce a kernel design scheme suitable for highly concurrent, asynchronous scenarios. It builds and improves on the traditional multi-process, multi-threaded model by replacing the task unit with a more lightweight coroutine, and bring it into the kernel to replace the responsibilities of the original thread. The design has the following four key enabling techniques, i.e., using coroutine control blocks to describe basic task units (Section 3.1), weaking the concept of thread and constructing  a coroutine state transition model (Section 3.2), using kernel coroutines (section 3.3), harmonizing task scheduling between the kernel and user processes by share schedulers (section 3.3).  Figure 1 shows the overall architecture of over design.
+In this section, we will introduce a kernel design scheme suitable for highly concurrent, asynchronous scenarios. It builds and improves on the traditional multi-process, multi-threaded model by replacing the task unit with a more lightweight coroutine, and bring it into the kernel to replace the responsibilities of the original thread. The design has the following four key enabling techniques, i.e., develping a set of data structure to control the coroutines  (Section 3.1), weaking the concept of thread and constructing  a coroutine state transition model (Section 3.2), using kernel coroutines (section 3.3), harmonizing task scheduling between the kernel and user processes by share schedulers (section 3.3).  Figure 1 shows the overall architecture of our design.
 
 <div>
     <center>
@@ -80,32 +84,51 @@ In this section, we will introduce a kernel design scheme suitable for highly co
 </div>
 
 
-### 3.1 Coroutine Control Block
+==这张图里面，可以把全局位图和进程的关系，给重新描述一下。关于内核里的进程的图示，这部分可以画的更好，并且需要体现统一调度。==
+
+### 3.1 Coroutine Runtime
+
+The Rust language provides two very high-level abstractions, ***Future*** and ***Wake***, to support the coroutine mechanism without limiting how the underlying runtime can be implemented. Therefore, we can take advantage of this decoupling property to customize a runtime that can be adapted in both kernel and user process. The coroutine runtime mainly consists of the following components: 1) Coroutine control block; 2) Executor.
+
+#### 3.1.1 Coroutine Control Block
 
 The Rust language provides the async and await keywords to make creating coroutines very easy. However, this convenience means that the execution of the coroutine is obscure and opaque, and the control of the coroutine cannot be accurately completed. Therefore, on the basis of Future and Waker abstractions provided by Rust language, we add additional fields to form a coroutine control block, so as to achieve accurate control of coroutines.
 
+```rust
+pub struct Coroutine{
+    /// Immutable fields
+    pub cid: CoroutineId,
+    pub kind: CoroutineKind,
+    /// Mutable fields
+    pub prio: usize,
+    pub future: Pin<Box<dyn Future<Output=()> + 'static + Send + Sync>>, 
+    pub waker: Arc<Waker>,
+}
+```
 
+Coroutine control block structure. Coroutines are similar to processes and threads. How to promote the execution of coroutines and how to switch and save the context of coroutines is the most important problem. Fortunately, Rust already provides two relatively well-developed abstractions, Future and Wake. The poll function required by the Future abstraction is used to drive coroutine execution, while the Wake abstraction is closely related to save and switch the context of coroutine . The execution and context switching of the coroutine are both done by the compiler to help us and are opaque. Therefore, the future and waker must be described in the coroutine control block. However, these two fields alone cannot achieve the purpose of accurate control. In the coroutine control block, three additional fields are added, among which id is used to identify the coroutine control block. The type field is used to indicate the task type corresponding to the coroutine. According to the task type of the coroutine, different processing is carried out. The prio field represents the priority order of tasks, which is the basis for scheduling order. These extra fields will be used to achieve accurate control of coroutines in the kernel, making the compiler work closely with the operating system kernel. Note that there is no coroutine state field in the coroutine control block, the state of the coroutine is implicitly described by the queue in which it is located. More detailed state transitions are described in the section 3.2.
 
-<div>
-    <center>
-    <img src="./Article/assets/cstructure.png"
-         style="zoom:100%"/>
-    <br>		<!--换行-->
-    Figure 2, Coroutine Control Block. 	<!--标题-->
-    </center>
-</div>
+#### 3.1.2 Executor
 
-Coroutine control block structure. Coroutines are similar to processes and threads. How to promote the execution of coroutines and how to switch and save the context of coroutines is the most important problem. Fortunately, Rust already provides two relatively well-developed abstractions, Future and Wake. The poll function required by the Future abstraction is used to drive coroutine execution, while the Wake abstraction is closely related to save and switch the context of coroutine . The execution and context switching of the coroutine are both done by the compiler to help us and are opaque. Therefore, the future and waker must be described in the coroutine control block. However, these two fields alone cannot achieve the purpose of accurate control. In the coroutine control block, three additional fields are added, among which id is used to identify the coroutine control block and is also used for coroutine scheduling. The id is saved in the scheduling queue, and the corresponding coroutine control block can be obtained only according to the id. The type field is used to indicate the task type corresponding to the coroutine. According to the task type of the coroutine, different processing is carried out. The prio field represents the priority order of tasks, which is the basis for scheduling order. These extra fields will be used to achieve accurate control of coroutines in the kernel, making the compiler work closely with the operating system kernel. Note that there is no coroutine state field in the coroutine control block, but we describe it implicitly, for example, if the coroutine's corresponding id is in the ready queue, then the coroutine is in the ready state. More detailed state transitions are described in the next section.
+In addition to controlling individual coroutines, an Executor structure is needed to manage all coroutines in a process. 
+
+**Coroutine queue**: The Executor maintains several priority queues that the coroutine will be stored in the queue corresponding to its priority, which guarantees that the coroutine with highest priority can execute firstly each time. In addition, the Executor maintains a blocked queue for blocked coroutines.
+
+**Priority**: In addition to the priority queue, the Executor needs to maintain a priority bitmap to indicate whether the corresponding priority exists as a coroutine, but this increases the complexity. Actually, the kernel does not need to be aware of all the coroutines within the user process address space, only the coroutine with the highest priority. Therefore, the Executor needs to maintain a priority that represents the highest priority among all coroutines, as well as the priority of the process. The priority field will be updated when the coroutine is added, awakened, or executed.
+
+**Synchronization and mutual exclusion**：With the two simple mechanisms described above, Executor meets the basic requirements of managing and controlling coroutines. In cases where the number of coroutines is small, it is perfectly sufficient to allocate a single CPU to the process, but when the number of coroutines increases, multiple cpus have to be allocated to the process to accommodate the increased workload, and the current Executor actually manages the coroutine as a global queue, which creates the problem of synchronous mutual exclusion. In addition, there is also the problem of synchronous mutual exclusion when a blocking coroutine is awakened. Therefore, all data structures in the Executor are maintained through atomic operations. 
+
+**CPU’s affinity**: When a process is assigned to multiple cpus, coroutines may move between multiple cpus, but this does not affect the CPU's affinity for coroutines because they all run on the same address space.
 
 
 
 ### 3.2 Coroutine State Model
 
-The importation of coroutines into multi-process and multi-thread models will inevitably bring some new changes, and these concepts need to be analyzed. If the kernel is regarded as a special process, and under the full kernel isolation mechanism, entering the kernel and returning the user process  both need to switch the address space, so the role of the process is very clear, in order to ensure the address space isolation. As for the thread, we have greatly weakened its role, in the traditional kernel, the thread will be bound to a specific task, but after the importation of coroutines, the thread is not bound to a specific task, only to provide a running stack for the coroutine. So instead of building a thread state transition model, we only need to build a coroutine state transition model. Similar to the five-state transition model of threads, coroutines should also have five states: create, ready, running, blocked, and exit, but there are some differences. Since the coroutine provided by Rust language is a stackless coroutine, in general, the coroutine only has a stack when it is running, but because the kernel provides preemptive scheduling, a coroutine may be interrupted by interrupt or exception when it is executing. At this time, the coroutine still has a stack, but it is no longer in the running state. Hence, coroutine states need to be divided according to where it is stackful or stackless. The coroutine state transition model is shown in the figure 3.
+The importation of coroutines into multi-process and multi-thread models will inevitably bring some new changes, and these concepts need to be analyzed. If the kernel is regarded as a special process, and under the full kernel isolation mechanism, entering the kernel and returning the user process  both need to switch the address space, so the role of the process is very clear, in order to ensure the address space isolation. As for the thread, we have greatly weakened its role, in the traditional kernel, the thread will be bound to a specific task, but after the importation of coroutines, the thread is not bound to a specific task, only to provide a running stack for the coroutine. So instead of building a thread state transition model, we only need to build a coroutine state transition model. Similar to the five-state transition model of threads, coroutines should also have five states: create, ready, running, blocked, and exit, but there are some differences. Since the coroutine provided by Rust language is stackless, in general, the coroutine only has a stack when it is running, but because the kernel provides preemptive scheduling, a coroutine may be interrupted by interrupt or exception when it is executing. At this point, the coroutine still occupies a stack, but it is no longer running on the CPU. We define it as the running suspended state. According to the causes, it can be divided into the running interrupted state and the running exception state. The coroutine state transition model is shown in the figure 3.
 
 - Once a coroutine is created, it goes into a ready state until it is scheduled and thus into a running state.
-- For coroutines in the running state, possible state transitions can be divided into two categories. On the one hand, during the running process, it may wait for some event to enter the blocked state, or detect other coroutines with higher priority (including those in other processes) and actively give up to enter the ready state. This state transition will not occupy the running stack; On the other hand, if an interrupt or exception occurs while it is running, the CPU will be preempted, and the current coroutine will enter the ready or blocked state. At this time, the coroutine will still occupy the running stack. In addition, a running coroutine will enter the exit state waiting to reclaim resources when the task is finished.
-- Regardless of whether the coroutine has a running stack or not, it can only be scheduled into the running state when it is in a ready state, and can only wait for an event to wake it up into the ready state when it is in a blocked state.
+- For coroutines in the running state, possible state transitions can be divided into two categories. On the one hand, during the running process, it may wait for some event to enter the blocked state, or detect other coroutines with higher priority (including those in other processes) and actively give up to enter the ready state. This state transition will not occupy the running stack; On the other hand, if an interrupt or exception occurs while it is running, the CPU will be preempted, and the current coroutine will enter the running suspended state. At this time, the coroutine will still occupy the running stack. In addition, a running coroutine will enter the exit state waiting to reclaim resources when the task is finished.
+- When the coroutine is in the blocked state, it must wait for an event to wake itself up and thus enter the ready state. However, when the coroutine is in the running suspended state, it does not need to go through the ready state transformation, only need to wait for the time, can directly enter the running state.
 
 <div>
     <center>
@@ -117,11 +140,13 @@ The importation of coroutines into multi-process and multi-thread models will in
 </div>
 
 
-
-
 ### 3.3 Kernel Coroutine
 
 The current mainstream practice is to use coroutines in user mode, and our design innovates on this point by importing coroutines into the kernel as well, and all tasks in the kernel are described in coroutines. The main functions provided by the kernel are process management, memory management, file system, device management, network management and so on. For normal synchronous tasks, the use of coroutines will not increase its overhead, and for the kernel to deal with external events, IO and other asynchronous tasks, the use of coroutines can better play the advantages of collaborative scheduling. However, there is a special task in the kernel, switching address spaces and running stacks, which consists of a piece of assembly code that is only called when the process is scheduled. Once this task is described in coroutine (switching coroutine, sc), new problems arise. First of all, it's a special coroutine that never ends. Second, its priority should be dynamic, aligned with the highest priority of all user processes. The sc will execute when there is no other coroutine in the kernel or the other coroutine has a lower priority, then the system will switch to the process address space with the highest priority, and switch the running stack. When there are other coroutines with higher priority in the kernel, the other coroutines will be executed first. Therefore, it is feasible to import coroutines into the kernel.
+
+
+
+==解释内核中的每段代码属于什么对象==
 
 
 ### 3.4 Shared Scheduler
@@ -145,7 +170,9 @@ In summary, the shared scheduler enables the kernel and processes to work in a c
 
 
 
-# 4. Implementation
+
+
+# 4. Implementation（这一部分的 内容需要大改）
 
 We implement the above design scheme on the basis of rCore, and build a set of asynchronous software ecology, so that the kernel can adapt to high concurrency, asynchronous scenarios. In this section, we will show the implementation details.
 
