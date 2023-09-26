@@ -1,32 +1,55 @@
-# Abstract
+
+
+## SharedScheduler: Coroutine scheduling framework across privilege levels
+
+> SharedScheduler：跨特权级的协程调度框架
+
+### Abstract
 
 As a classical concurrency model, multi-threading technology has been widely supported by numerous operating systems and extensively applied in various application programs. However, as concurrency increases, the high system overhead and context-switching costs of multi-threading model have gradually become unacceptable. As a result, user-level threads have emerged, but they often only have been supported by user-level  and are not recognized by the operating system, which led to the inability of the kernel to  estimate the workload of coroutine tasks in the system accurately to perform more precise scheduling strategy to achieve higher system resource utilization. Based on the above situation, we propose the Shared Scheduler with the following characteristics: 1) It introduces the coroutine control block that allows both the kernel and applications to be aware of the coroutine's state, serving as the fundamental unit for kernel scheduling. 2) It introduces the concept of priorities within coroutines and designed a unified set of priority-based scheduling algorithms for both user-level and kernel-level coordination.  Finally, we analyzed the characteristics of the Shared Scheduler on QEMU and FPGA platforms, concluding that the coroutine scheduling algorithms has advantages in terms of switch overhead and granularity of resource utilization control.
 
+> Abstract: 本文提出 SharedScheduler，一种跨越特权级的协程调度框架。我们将协程引入到操作系统和应用程序中，作为最小的任务单元，用于替换传统的多线程并发模型。通过给协程附着上优先级，SharedScheduler 能够利用优先级位图机制实现对协程的调度，并且让操作系统能够在一定程度上感知用户态协程，从而实现跨越特权级协调统一调度的目的。为了解决纯用户态协程在面对真正的并发时无力的挑战，我们在 SharedScheduler 中封装了对硬件线程的抽象，并且将系统调用改造成异步的形式，从而充分利用起多处理器系统的优势。最终，我们构建出一个特定的 web server 应用场景，在 FPGA 平台上对 SharedScheduler 进行了测试，结果证明它的确能够利用优先级实现对协程的精准控制，并且使用协程能够显著减小多线程并发模型带来的开销。
 
 
-# 1. Introduction
+
+### 1. Introduction
 
 In the early days, operating systems introduced the abstraction of processes to meet the concurrency and isolation requirements of multiprogramming. However, due to the large resource granularity of processes and the high cost of inter-process communication, operating systems proposed the abstraction of threads as the basic scheduling unit. Threads share the same address space, enabling efficient communication among them. With the rapid increase in concurrency, the use of threads as concurrency units has gradually become unacceptable in terms of resource utilization. As of 2022, Google's servers are [handling 893 billion requests per day](./bibtex_ref/google10search), with an average of 8 million requests per second, posing a great challenge for both hardware and software. Handling such a large number of asynchronous requests cannot be supported solely by threads. In addition, as resource-constrained embedded devices become [increasingly commonplace in various fields](./bibtex_ref/mahbub2020iot) such as agriculture, education, and healthcare, the abstraction of threads still appears somewhat bloated in such devices. In scenarios with high concurrency or resource constraints, the industry has provided some solutions in both operating systems and programming languages. 
 
-Linux provided system calls such as [select and epoll](./bibtex_ref/epoll) to support user-level asynchronous I/O tasks by multiplexing multiple I/O operations on a single thread. The epoll operation uses a single thread to poll multiple listening ports, and when no event occurs, the polling operation will cause the polling thread to be block until an event arrives and wakes it up.  When an event occurs, the polling thread will copy the corresponding listening port from kernel space and send it to a separate thread for event processing. Windows [I/O Completion Ports (IOCP)](./bibtex_ref/IOCP) also provide a similar mechanism for I/O multiplexing. Unlike Linux, Windows IOCP calls the callback function in the completion thread for post-processing work after the completion of an I/O operation, making it a truly asynchronous I/O operation. Although I/O multiplexing technology can effectively reduce thread resource waste, from the kernel's perspective, the poll thread is just an ordinary thread participating in regular scheduling, and the kernel cannot perceive the asynchronous tasks aggregated in the poll thread. Furthermore, I/O multiplexing forces user-level applications to adopt the producer-consumer model for handling asynchronous tasks, reducing the flexibility of user-level operations. [Native AIO](./bibtex_ref/nativeAIO) is a set of asynchronous I/O interfaces supported by the kernel, which avoids frequent switching and data copying between user space and the kernel. However, because it requires kernel support, it can only be used on specific operating system architectures and has poor compatibility. IO_uring is a relatively recent technology that adopts an innovative asynchronous method, allowing for the direct submission of IO requests in user mode, thus eliminating the need for context switches between user and kernel spaces. Additionally, it utilizes shared memory between user and kernel modes to prevent memory copying, thereby enhancing IO processing efficiency and throughput. However, excessive design has led to an increase in kernel complexity and a greater difficulty in utilizing the interface.
+Linux provided system calls such as [select and epoll](./bibtex_ref/epoll) to support user-level asynchronous I/O tasks by multiplexing multiple I/O operations on a single thread. The epoll operation uses a single thread to poll multiple listening ports, and when no event occurs, the polling operation will cause the polling thread to be block until an event arrives and wakes it up.  When an event occurs, the polling thread will copy the corresponding listening port from kernel space and send it to a separate thread for event processing. Windows [I/O Completion Ports (IOCP)](./bibtex_ref/IOCP) also provide a similar mechanism for I/O multiplexing. Unlike Linux, Windows IOCP calls the callback function in the completion thread for post-processing work after the completion of an I/O operation, making it a truly asynchronous I/O operation. Although I/O multiplexing technology can effectively reduce thread resource waste, from the kernel's perspective, the poll thread is just an ordinary thread participating in regular scheduling, and the kernel cannot perceive the asynchronous tasks aggregated in the poll thread. Furthermore, I/O multiplexing forces user-level applications to adopt the producer-consumer model for handling asynchronous tasks, reducing the flexibility of user-level operations. [Native AIO](./bibtex_ref/nativeAIO) is a set of asynchronous I/O interfaces supported by the kernel, which avoids frequent switching and data copying between user space and the kernel. However, because it requires kernel support, it can only be used on specific operating system architectures and has poor compatibility. IO_uring is a relatively recent technology that adopts an innovative asynchronous method, allowing for the direct submission of IO requests in user mode, thus eliminating the need for context switches between user and kernel spaces. Additionally, it utilizes shared memory between user and kernel modes to prevent memory copying, thereby enhancing IO processing efficiency and throughput. However, excessive design has led to an increase in kernel complexity and a greater difficulty in utilizing the interface. （这一段是介绍多线程模型与异步 I/O 结合的研究）
 
-Moreover, compilers and runtime libraries have built a set of independent scheduling systems in user space based on the asynchronous support provided by the operating system. User-level thread such as goroutine,  is an independent asynchronous runtime environment built on top of an operating system, which has lower context switching overhead than kernel threads and less invasive impact on the code. It is common practice to create multiple user-level threads within a single kernel thread to enhance concurrency. [POSIX AIO](./bibtex_ref/posix-aio) is a set of asynchronous I/O interfaces implemented in user space through the POSIX thread interface, which is compatible with different architectures and operating systems that support the POSIX standard. Since the kernel is not aware of asynchronous tasks, there are significant overheads, including thread creation, scheduling, destruction, I/O buffer copying, and context switching cross domain. There has been considerable work on user-level threads and asynchronous runtimes in user mode. However, these implementations are built on top of the kernel, making it difficult for the kernel to perceive coroutines in user mode, consequently preventing the kernel from performing fine-grained resource scheduling.
+Moreover, compilers and runtime libraries have built a set of independent scheduling systems in user space based on the asynchronous support provided by the operating system. User-level thread such as goroutine,  is an independent asynchronous runtime environment built on top of an operating system, which has lower context switching overhead than kernel threads and less invasive impact on the code. It is common practice to create multiple user-level threads within a single kernel thread to enhance concurrency. [POSIX AIO](./bibtex_ref/posix-aio) is a set of asynchronous I/O interfaces implemented in user space through the POSIX thread interface, which is compatible with different architectures and operating systems that support the POSIX standard. Since the kernel is not aware of asynchronous tasks, there are significant overheads, including thread creation, scheduling, destruction, I/O buffer copying, and context switching cross domain. There has been considerable work on user-level threads and asynchronous runtimes in user mode. However, these implementations are built on top of the kernel, making it difficult for the kernel to perceive coroutines in user mode, consequently preventing the kernel from performing fine-grained resource scheduling. （这一段介绍纯用户态的线程或者协程模型）
 
-In addition to capturing execution errors in applications, the kernel also needs to handle high-privileged instructions such as device I/O operations. These events are not immediately triggered, thus the kernel also requires a lightweight asynchronous task scheduling mechanism for performance optimization. [LXDs](./bibtex_ref/LXDs) has developed a lightweight asynchronous runtime environment in the kernel for cross-domain batch processing. This runtime environment allows lightweight cooperative threads to be created in the kernel that can execute tasks asynchronously, thereby improving system throughput. [Memif](./bibtex_ref/memif) is an operating system service for memory movement that provides a low-latency and low-overhead interface based on asynchronous and hardware-accelerated implementations. [Lee et al.](lee2019asynchronous,.md) significantly improved application performance by reducing I/O latency through the introduction of an asynchronous I/O stack (AIOS) for the kernel. [PM-AIO](./bibtex_ref/Pm-aio) indicates that the Native AIO path appears as a pseudo-asynchronous IO in the PM file system, and true asynchronous AIO is achieved by splitting IO requests into different sub-files. Due to the lack of coroutine support within the kernel, these approaches often propose asynchronous task scheduling schemes that are independent of the kernel thread scheduler, resulting in a lack of generality and scalability, as well as increased kernel complexity.
+In addition to capturing execution errors in applications, the kernel also needs to handle high-privileged instructions such as device I/O operations. These events are not immediately triggered, thus the kernel also requires a lightweight asynchronous task scheduling mechanism for performance optimization. [LXDs](./bibtex_ref/LXDs) has developed a lightweight asynchronous runtime environment in the kernel for cross-domain batch processing. This runtime environment allows lightweight cooperative threads to be created in the kernel that can execute tasks asynchronously, thereby improving system throughput. [Memif](./bibtex_ref/memif) is an operating system service for memory movement that provides a low-latency and low-overhead interface based on asynchronous and hardware-accelerated implementations. [Lee et al.](lee2019asynchronous,.md) significantly improved application performance by reducing I/O latency through the introduction of an asynchronous I/O stack (AIOS) for the kernel. [PM-AIO](./bibtex_ref/Pm-aio) indicates that the Native AIO path appears as a pseudo-asynchronous IO in the PM file system, and true asynchronous AIO is achieved by splitting IO requests into different sub-files. Due to the lack of coroutine support within the kernel, these approaches often propose asynchronous task scheduling schemes that are independent of the kernel thread scheduler, resulting in a lack of generality and scalability, as well as increased kernel complexity. （这一段介绍内核中的异步任务框架）
 
 
 Based on the aforementioned discussion, we can summarize the following issues in the current state of asynchronous task scheduling in the industry:
+
 1. The kernel provides basic abstractions such as processes and threads, but for high-concurrency and resource-limited scenarios, these abstractions may not be lightweight enough.
 2. Lightweight runtimes provided in user mode, such as user-level threads, cannot be directly perceived and scheduled by the kernel, leading to the kernel's inability to precisely control resource allocation.
 3. Some asynchronous tasks within the kernel itself (such as cross-domain communication in LXDs) are built as separate runtimes within the kernel, lacking a unified scheduling framework.
 
 Therefore, based on the aforementioned issues, we propose our Shared Scheduler, which introduces stackless coroutines with priority into both the kernel and applications, serving as the kernel's fundamental scheduling unit. This provides a unified scheduling framework for all asynchronous tasks within the kernel. Additionally, it enables the kernel to perceive the priority of user coroutines, allowing for fine-grained scheduling of user coroutines and ensuring precise allocation of system resources.
 
-# 2. Background And Motivation
+> Introduction: 目前的 web server 具有不断增强并发性、可扩展性的需求。大规模的 web server 必须容纳数以万计同时存在的客户端连接，并且不能产生明显的性能下降。截至2022年，谷歌服务器每天处理8830亿次请求，平均每秒处理800万次请求。针对如此大规模的并发程序，多线程模型取得了一定程度上的成功，但随着需求逐步扩大，多线程模型的不合适性逐渐暴露出来。
+>
+> 1）线程作为底层硬件的抽象，是非常不确定的，适合于不确定的并发结构中（引用 The Problem with Threads），而在 web server 这种并发场景下，需要做的是监听收到的请求包，进行处理并返回结果给客户端，这种确定性的结构，使用多线性模型是非常不合适的。
+>
+> 2）多线程模型很难使用异步 I/O，尽管可以与操作系统底层的事件驱动模型进行结合，但会增加操作系统的复杂性。例如，Linux提供了 [select and epoll](./bibtex_ref/epoll) 等系统调用，通过在单个线程上复用多个I/O操作来支持用户级异步I/O任务。epoll 将多线程模型与事件驱动相结合，但仍需要操作单个线程来轮询多个侦听端口，当没有事件发生时，轮询操作将导致轮询线程被阻塞，直到事件到达并唤醒它。当事件发生时，轮询线程将从内核空间复制相应的侦听端口，并将其发送给单独的线程进行事件处理，这种做法迫使应用程序开发人员采用生产者-消费者模型进行事件分发。Windows 的 [I/O Completion Ports (IOCP)](./bibtex_ref/IOCP) 也提供了类似的I/O多路复用机制，但它更加接近事件驱动模型，在完成I/O操作后调用线程中的回调函数进行后处理工作，使其成为真正的异步 I/O 操作。[Native AIO](./bibtex_ref/nativeAIO) 是内核支持的一组异步 I/O 接口，避免了用户空间和内核之间频繁的切换和数据复制。但是，由于它需要内核支持，因此只能在特定的操作系统体系结构上使用，兼容性较差。而 io_uring 则采用了一种创新的异步方法，允许在用户模式下直接提交 IO 请求，从而消除了在用户和内核空间之间切换上下文的需要。此外，它利用用户模式和内核模式之间的共享内存来防止内存复制，从而提高IO处理效率和吞吐量。然而，过度的设计导致了内核复杂性的增加和使用接口的更大困难。除此之外，还有通过 POSIX 线程接口直接在用户空间实现的异步 I/O 接口 [POSIX AIO](./bibtex_ref/ POSIX - AIO)，它兼容支持 POSIX 标准的不同架构和操作系统。但由于操作系统不知道异步任务，因此有很大的开销，包括线程创建、调度、销毁、I/O缓冲区复制和跨域上下文切换。
+>
+> 3）线程需要占用的资源较多，而纯用户态线程在面对真正的并发时是无能为力的。内核支持的线程需要一套完整的硬件线程抽象（堆栈、通用寄存器、程序计数器等），因此不仅占用的资源较多，且其切换开销较大，在大规模并发时，会带来严重的性能下降。尽管用户态线程能够减少切换开销，增强灵活性，例如 goroutine，但通常是将多个用户态线程映射到一个内核线程上，因此操作系统很难感知用户态线程，不能执行细粒度的资源调度，面对真正的并发时无能为力。
+>
+> 在针对多线程模型不适用于大规模并发的 web server 场景的问题，已经展开了很多研究工作，但大部分仍然选择继续使用线程这个不轻量的抽象，没有从根本上解决问题。除了上述问题，在大规模并发的 web server 程序中还需要异步 I/O 机制的支持，这给操作系统带来了严峻的挑战。操作系统不仅需要给应用程序提供异步 I/O 支持，还需要给自身的一些异步任务构建出一套运行时。尽管已经有相关的研究展开，例如，[LXDs](./bibtex_ref/LXDs) 在内核中开发了一个轻量级的异步运行时环境，用于跨域批处理。这个运行时环境允许在内核中创建轻量级协作线程，这些线程可以异步执行任务，从而提高系统吞吐量；[Memif](./bibtex_ref/ Memif) 是一个用于内存移动的操作系统服务，它提供了一个基于异步和硬件加速实现的低延迟和低开销接口；[Lee等人]((lee2019asynchronous,.md))通过为内核引入异步 I/O 堆栈（AIOS）来减少 I/O 延迟，从而显著提高了应用程序性能；但这些方法通常独立于内核线程调度器之外，导致缺乏通用性和可伸缩性，并且增加了操作系统内核的复杂性。
+>
+> 在本文中，我们提出 SharedScheduler，一种跨越特权级的协程调度框架，用于解决上述的问题。与之前的工作相似，SharedScheduler 使用用户态协程来允许在单个硬件线程抽象上进行多任务并发。而 SharedScheduler 的独特之处在于给协程附着上优先级，并且将其引入到操作系统内，作为基本的任务单元，为操作系统中的所有异步任务提供协调统一的调度框架，对协程进行细粒度的调度，确保系统资源的精准分配。
+>
+> （需要标注线程指的是内核支持的线程，用户态线程则会显著指明为用户态线程。）
+
+### 2. Background And Motivation
 
 In order to enhance the performance of I/O-intensive applications, such as network applications and disk I/O applications, both the kernel and user space provide certain levels of asynchronous support. This chapter primarily focuses on widely used user-space coroutine technology and kernel-level I/O multiplexing technology in the industry.
 
-## 2.1 Coroutine
+#### 2.1 Coroutine
 
 Coroutine is a lightweight concurrency programming technique that enables cooperative scheduling of multiple execution flows within a single kernel thread. Compared to traditional kernel threads or processes, coroutines have lower resource overhead and higher execution efficiency. Coroutines can be seen as user-level threads that are actively controlled by programmers for scheduling and context switching. Modern programming languages such as[ C++20](./bibtex_ref/cpp-coroutine), [Go](./bibtex_ref/goroutine), [Rust](./bibtex_ref/rust-async), [Python](./bibtex_ref/python-coroutine), [Kotlin](./bibtex_ref/kotlin-coroutine), etc., offer varying degrees of support for coroutines. In order to strike a balance between usability, safety, and performance, we compared the support for coroutines in Rust and Go programming languages within the kernel.
 
@@ -36,7 +59,7 @@ Coroutines in the Rust language are implemented through the async/await syntax, 
 
 However, we have noticed that at the application layer, coroutine implementations cannot be directly recognized by the kernel. Specifically, the kernel can only perceive the processes and threads of user programs. In an extreme scenario, a process with thousands of coroutine tasks may appear no different to the kernel than a thread with just a single coroutine task. In order to enable the kernel to make appropriate resource allocations based on the actual workload of tasks, it becomes necessary to make the kernel aware of the presence of user coroutines.
 
-## 2.2 Asynchronous tasks in kernel
+#### 2.2 Asynchronous tasks in kernel
 
 In the kernel of an operating system, asynchronous tasks refer to tasks that can be executed in the background without blocking the main thread or other tasks. Asynchronous tasks are typically executed in an event-driven manner, where the kernel initiates corresponding asynchronous tasks to handle specific events when they occur. The kernel only provides an abstraction for threads in its design, but it is impractical to allocate a separate kernel thread for each asynchronous task. Some efforts have been made to handle asynchronous tasks in the kernel by building a lightweight thread runtime specifically for that purpose, such as cross-domain communication in LXD. However, this approach fails to provide a unified scheduling mechanism for regular threads and lightweight threads within the kernel, leading to increased complexity in kernel scheduling.
 
@@ -46,29 +69,19 @@ We have designed a simple network scenario where multiple clients need to send a
 
 We have observed that due to the coarse granularity of kernel thread resources, IO multiplexing chooses to aggregate multiple IO listening events into a single thread, which inevitably leads to event dispatching. To fundamentally address this issue, we introduce coroutines with finer resource granularity into the kernel, making them the smallest units for listening to IO ports and participating in unified kernel scheduling. Kernel coroutines correspond one-to-one with user coroutines, thereby eliminating the necessity for event dispatching at its core.
 
-
-
-#### <!--Async Support In Rust-->
-
-<!--In its early stages, Rust supported stackful coroutines. However, to better address issues related to memory leaks and debugging, Rust discontinued support for [stackful coroutines in version 1.0 and instead adopted an asynchronous programming model based on async/await](./bibtex_ref/rust-async). Starting in 2018, Rust began supporting stackless coroutines in its nightly version. In this article, all references to coroutines refer to stackless coroutines.-->
-
-<!--The Rust compiler has the capability to transform asynchronous functions into coroutines. By using the async/await syntax, the compiler can expand an asynchronous function into a state machine that suspends when the asynchronous operation is not complete and resumes when it is completed. This transformation is performed at compile time, ensuring both efficiency and safety at runtime.-->
-
-<!--It is worth to note that Rust compiler does not provide an asynchronous runtime, but only provides abstractions such as Future for task management, Waker for asynchronous wakeups, and async/await syntax for transforming functions into state machines. Third-party libraries often leverage these abstractions provided by Rust to implement their own asynchronous runtimes.-->
-
-<!--![](./Article/assets/rust_async_model.png)-->
-
-<!--The Rust asynchronous programming model is illustrated in Figure 1.2. First, the user creates a task and adds it to the global task queue. Then, worker threads in the Executor continuously fetch tasks from the task queue and execute them, creating a waker to maintain the task's execution status. When a task needs to wait for an asynchronous event, the waker is placed in the corresponding Reactor for the message and the worker thread executes other tasks. When the asynchronous event arrives in the Reactor, it finds the corresponding waker and uses the wake operation to re-add the corresponding blocking task to the task queue.-->
-
-#### <!--User-Space Interrupt Support-->
-
-<!--In traditional operating systems, signals are often transmitted between processes through the kernel. The sending process needs to enter kernel mode to attach the signal to the receiving process, and the performance overhead caused by the privilege level switch can lead to low efficiency. The receiving process often needs to wait until the next scheduling to respond to the signal, which means that the signal cannot be responded to in a timely manner, resulting in high latency. The emergence of user-space interrupt technology has made efficient signal transmission possible.-->
-
-<!--The term "interrupt" has traditionally been used to describe signals that originate from hardware and are processed in the kernel. Even the software interrupts we commonly use (i.e., signals generated by software) are also processed in the kernel. However, in recent years, a design has emerged that allows tasks in user space to send interrupt signals to each other without going through the kernel, and to process them in user space directly. In 2020, Intel introduced the [x86 user-space interrupt feature](./bibtex_ref/intel-white-paper) in the Sapphire Rapids processor, and in 2021, Linux submitted code for user-space interrupt support in an [RFC patch](./bibtex_ref/uint). Taking user-space signal transmission as an example, we analyze the advantages of user-space interrupts.-->
-
-<!--In traditional multi-core systems, when user processes running on two cores simultaneously communicate through signals, the sending process needs to enter the kernel to insert the signal into the signal queue of the receiving process, and wait for the receiving process to respond to the signal until it is next scheduled. However, in multi-core systems that support user-space interrupts, the sending process can directly send signals to the receiving process through a hardware interface, and the receiving process can respond immediately when scheduled on the core. In the best case scenario (i.e., when both the sender and receiver are both running on different cores), signal transmission in user-space interrupts does not require entering the kernel, and the receiving end can respond immediately.-->
-
-
+> Background And Motivation：
+>
+> 近年来，协同程序引起了广泛的关注，例如 DepFast 在分布式仲裁系统中使用协程；Capriccio 使用相互协作的用户态线程来实现可扩展的大规模 web server。根据前人的研究，我们认为协同程序在构建大规模并发程序的场景下是大有作为的。
+>
+> 协同程序是一种轻量级的并发编程技术，支持在单个内核线程上协作调度多个执行流。与传统的内核线程或进程相比，协同程序具有更低的资源开销和更高的执行效率。现代的编程语言，如[c++ 20](./bibtex_ref/ pcp -coroutine)、[Go](./bibtex_ref/goroutine)、[Rust](./bibtex_ref/ Rust -async)、[Python](./bibtex_ref/ Python -coroutine)、[Kotlin](./bibtex_ref/ Kotlin -coroutine)等，都为协同程序提供了不同程度的支持，根据协同程序的实现方式，可以划分为以下两类：
+>
+> 1）Stackful：一类为用户态线程，其中以 Go 语言提供的 [Goroutine](./bibtex_ref/ Goroutine) 为代表。Goroutine 是 Go 编程语言中的协同程序实现，它简化并增强了并发编程，允许在单个内核线程内进行大量并发执行。在 Go 语言中，使用 “Go” 关键字后跟一个函数调用来创建 Goroutine。此函数调用与同一地址空间中的其他 Goroutine 并发运行。Goroutine 有自己的运行栈空间，由 Go 语言内集成的运行时动态分配和管理，这个栈空间能够用于保存局部变量和函数调用关系。因此，这类用户态线程相比于内核线程，减少了寄存器切换时的开销，但效果有限。
+>
+> 2）Stackless：另一类则是以 Rust 语言为代表的无栈协程。Rust 语言支持的协程是通过 async/await 语法和相应的运行时库实现的。与用户态线程相比，Rust 协程是作为无栈的，它不需要预先分配固定大小的栈空间。相反，协程的栈空间是根据需求进行动态分配和释放的。这使得协程的创建和销毁非常轻巧和高效。
+>
+> 综合上述分析，我们选择了使用无栈协程来替换传统的多线程模型，将其应用在大规模并发的 web server 场景中，并且由于 Rust 语言编译器的严格检查机制以及内存安全方面的显著优势，我们选择了 Rust 协程。随着对 Rust 协程的进一步了解，我们逐渐认识到协程与异步 I/O 机制之间的紧密关系（加引用），并且 Rust 提供的高级抽象使得系统开发人员能够灵活的定义协程，我们可以在内核中引入与用户态协程一一对应的内核协程，用于处理各种各样的异步任务，从而消除内核底层事件驱动的必要性。这给在操作系统中定义一套统一的异步任务调度机制提供了契机。
+>
+> 动机：我们针对大规模并发的 web server 场景下的研究，以及学术界和工业界对协程的关注促使我们开始思考重新并发模型和异步框架，寻求能够满足更大规模、更高性能需求的解决方案。为此，我们提出了一个跨越特权级的协程调度框架，让操作系统内核中的异步 I/O 任务与用户态协程的调度能够协调统一，提供一套统一的异步 I/O 框架，同时满足高并发的需求。
 
 # 3. Design
 
@@ -169,6 +182,22 @@ In summary, the shared scheduler enables the kernel and processes to work in a c
 </div>
 
 
+> Design：
+
+它们基于一个非常简单的原则:确定性的目的应该用确定性的手段来实现。不确定性应该在需要的地方谨慎地引入，并且应该在程序中明确。
+
+协程之间的确定性，不确定性在 await 处，显示的，谨慎的引入。
+
+
+
+用户态线程 == 协程
+
+事件驱动机制 == 用户态中断
+
+协程与多处理器之间的问题 == 共享调度器
+
+
+
 
 
 
@@ -229,6 +258,18 @@ For instance, the following diagram illustrates the entire workflow of an async
 
 # 5. Performance Evaluation
 
+
+
+加入一些现实的背景问题，可以在实验部分进行详细描述，例如在线实时的深度学习，接收到发来的数据，进行矩阵运算，再返回原来的处理值。
+
+ webserver 面临的问题，深度学习推荐系统需要实现低延迟的模型更新，从而让新的内容和用户及时地在推荐服务中展示。然而，现有的深度学习推荐系统无法满足这种需求。它们往往以离线的方式训练和验证模型，之后将模型从单个训练集群中广播给部署在全球推理集群中的模型副本。这种做法会产生分钟甚至小时级别的模型更新延迟，从而对推荐服务的质量（Service-Level Objectives, SLOs）产生负面影响。
+
+
+
+详细描述设置，线程创建于销毁不会带来影响，纯粹比切换的开销。
+
+
+
 To demonstrate the lower switching overhead of coroutine programming model compared to thread programming model, we constructed two different TcpServer models using coroutine and thread respectively to test the server's throughput, message latency, and latency jitter.
 
 In addition, we will demonstrate the significant role of priority in ensuring the real-time performance of certain specific tasks under limited resources by analyzing the impact of coroutine priority on task throughput, message latency, and latency jitter in the TcpServer experiment.
@@ -250,6 +291,8 @@ To evaluate the advantages and disadvantages of the coroutine and thread program
 The test results for message latency are shown in the following figure. As can be seen from the figure, the thread model has similar or even slightly lower message latency than the coroutine model when the number of connections is small. This is because when the number of connections is small, the kernel can directly schedule threads to execute tasks, while the coroutine model adds an extra layer of synchronization and mutual exclusion operations in the scheduler, resulting in slightly higher latency. As the number of connections increases, the delay of the thread model rapidly increases and is much higher than that of the coroutine model. This is because most coroutine switches do not need to trap into the kernel, only switching the function stack, resulting in much smaller switching overhead than threads. Comparing different matrix request sizes under the same model, it is found that the larger the matrix size, the higher the latency, which is due to the larger overhead of message sending and receiving and message processing for larger matrix requests, leading to an expected increase in latency.
 
 ![](./Article/assets/compare_thread_coroutine.png)
+
+这里的图可以画条形图，对比会比较好一点
 
 The figure also shows the test results of the total throughput for different matrix request sizes under different models. It can be seen that the total throughput of the server under the coroutine model increases linearly with the increase of the number of connections, even when the matrix request size increases. Since the load has not reached the peak (the client sends a request every 100ms, and the highest latency shown in the figure is only 10ms), the throughput depends on the number of connections and the client's request frequency. For the server under the thread model, it can keep up with the coroutine model when the number of connections is small, but as the number of connections increases, the switching overhead increases rapidly, leading to a slowing down of the total throughput increase trend. As for Thread-20, the load almost reaches its peak when the number of connections is around 64.
 
