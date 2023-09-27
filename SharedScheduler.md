@@ -164,7 +164,7 @@ read!(fd, buffer); // Sync call
 
 <div>
     <center>
-    <img src="./Article/assets/Async_Syscall.png"
+    <img src="./Article/assets/async_syscall.png"
          style="zoom:100%"/>
     <br>		<!--换行-->
     Figure 4, Asynchronous system call. 	<!--标题-->
