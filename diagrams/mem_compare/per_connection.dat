@@ -1,0 +1,5 @@
+            kernel                  user
+kcuc        176(async_read)         120(handle_tcp_client_async) + 80(matrix_calc_async) + 64(send_rsp_async)
+kcut        176(async_read)         0x8000 * 3
+ktut        0                       0x8000 * 3
+ktuc        0x4000                  120(handle_tcp_client_async) + 80(matrix_calc_async) + 64(send_rsp_async)
