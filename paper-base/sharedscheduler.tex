@@ -71,7 +71,7 @@
 \acmYear{2024}
 \acmDOI{XXXXXXX.XXXXXXX}
 
-\settopmatter{printacmref=false} %remove ACM reference format
+\settopmatter{printacmref=true} %remove ACM reference format
 
 % %% These commands are for a PROCEEDINGS abstract or paper.
 % \acmConference[Conference acronym 'XX]{Make sure to enter the correct
@@ -317,7 +317,7 @@ As an alternative to the multi-threading model, coroutines have attracted much a
 
 
 
-In this paper, we rethink the concurrency model and asynchronous framework to find solutions that could meet the larger-scale and higher performance requirements. We propose COPS\footnote{The \textbf{CO} in COPS represents the coroutine, \textbf{P} represents the priority, and \textbf{S} represents scheduling. The entire operating system must be run under COPS's management.}, a coroutine-based priority scheduling framework in OS. COPS improves the high context-switching overhead and solve the problem of uncertain sequence of accessing shared resources by using coroutines as the basic task unit. In addition, COPS draws on the existing research on asynchronous I/O mechanism, introduces coroutines into the kernel, and combines it with the asynchronous I/O mechanism to provide a coordinated and unified scheduling framework for all tasks in OS. 
+In this paper, we rethink the concurrency model and asynchronous framework to find solutions that could meet the larger-scale and higher performance requirements. We propose COPS\footnote{The \textbf{CO} in COPS represents the coroutine, \textbf{P} represents the priority, and \textbf{S} represents scheduling. The entire operating system must be run under COPS's management.}, a \\coroutine-based priority scheduling framework in OS. COPS improves the high context-switching overhead and solve the problem of uncertain sequence of accessing shared resources by using coroutines as the basic task unit. In addition, COPS draws on the existing research on asynchronous I/O mechanism, introduces coroutines into the kernel, and combines it with the asynchronous I/O mechanism to provide a coordinated and unified scheduling framework for all tasks in OS. 
 
 \section{Background}
 
@@ -381,17 +381,17 @@ The \textbf{Future} and \textbf{Wake} traits are provided by Rust to support the
 
 As the description of \ref{subsection: rust_async}, the polling process specified in future trait is partially transparent, which prevents us from accurately controlling the coroutine. Therefore, on the basis of future and waker abstractions provided by Rust language, we add additional fields to form coroutine control blocks, so as to achieve precise control of coroutines. The structure of the coroutine control block is shown in listing \ref{ccb}.
 
-\begin{lstlisting}[label={ccb},caption={Coroutine control block}]
-pub struct Coroutine{
-    pub cid: CoroutineId,
-    pub kind: CoroutineKind,
-    pub priority: usize,
-    pub future: Pin<Box<dyn Future<Output=()> + 'static + Send + Sync>>, 
-    pub waker: Arc<Waker>,
-}
-\end{lstlisting}
-
 How to switch and save the context of the coroutine is the most important issue. The Wake trait is responsible for saving and switching context of coroutine. Both the execution and the context-switching of the coroutine are done by the compiler and are transparent. Therefore, the future and wake must be described in the coroutine control block. However, Using these two fields alone means that the execution of coroutine can only use a rough polling way to promote, neither cannot achieve the purpose of accurately control, nor be combined with asynchronous I/O mechanisms to truly take the advantages of coroutines. For this purpose, we use three additional fields in the coroutine control block to achieve the accurately control of the coroutine. 1) The cid is used to identify coroutine control blocks, and plays a key role in asynchronous I/O mechanism; 2) The Kind field is used to indicate the type of the coroutine task. After promoting the execution of the coroutine to a certain stage, COPS will process the coroutine differently according to the task type; 3) The Priority field indicates the priority of coroutine and serves as the basis of the COPS's scheduling framework.
+
+\begin{lstlisting}[label={ccb},caption={Coroutine control block}]
+  pub struct Coroutine{
+      pub cid: CoroutineId,
+      pub kind: CoroutineKind,
+      pub priority: usize,
+      pub future: Pin<Box<dyn Future<Output=()> + 'static + Send + Sync>>, 
+      pub waker: Arc<Waker>,
+  }
+  \end{lstlisting}
 
 Note that we didn't label the coroutine with a state field because the Rust coroutines only have pending or ready states, so the state of the coroutine is implicitly described by the queue it is in.
 
@@ -572,8 +572,8 @@ The test start after all connections between the client and the server are estab
 \end{figure*}
 
 \begin{itemize}[leftmargin=*]
-\item COPS's synchronous mutual exclusion mechanism overhead: The concurrency provided in COPS results in that the synchronous mutual exclusion overhead is increased to ensure that data structures such as Executor are accessed correctly. This can be seen from the comparison of KCUC vs KCUT, KCUT vs KTUT, and KCUC vs KTUT in Fig.~\ref{fig:throughput-latency}. Note that when the amount of connections is small, due to the allocation of excess CPU to the application, COPS yield frequently because of no ready coroutine, which results in COPS frequently acquires Executor locks when scheduling the kernel coroutines. The synchronous mutually exclusive overhead increases rapidly, which leads to low scheduling efficiency of kernel coroutines. So the KCUC and KCUT models are with high latency when the connection number is small. Therefore, COPS is not applicable to applications with low concurrency.
-\item Lower coroutine context-switching overhead: According to KCUC vs KCUT and KCUT vs KTUT, the latency of the threading model will gradually exceed that of the coroutine model as the number of connections increases. When the number of connections reaches 32, the latency of KCUT is lower than that of KTUT. The coroutines and threads in the kernel complete the same operation, so the overhead of coroutine context-switching is less than that of threads (even the kernel thread with simplified context switching). When the number of connections is 2, the latency of KCUC is lower than that of KCUT. This is because most of the coroutine context-switching in KCUC model are carried out in userland, while the privilege-switching exist in KCUT model. However, KCUT and KTUT models that use threads will decrease their throughput and increase their context-switching cost rapidly as the number of connections increases to a certain extent.
+\item COPS's synchronous mutual exclusion mechanism overhead: The concurrency provided in COPS results in that the synchronous mutual exclusion overhead is increased to ensure that data structures such as Executor are accessed correctly. This can be seen from the comparison of KCUC vs KCUT, KCUT vs KTUT, and KCUC vs KTUT in Fig.~\ref{fig:throughput-latency}. Note that when the amount of connections is small, due to the allocation of excess CPU to the application, COPS yield frequently because of no ready coroutine, which results in COPS frequently acquires Executor locks when scheduling the kernel coroutines. The synchronous mutually exclusive overhead increases rapidly, which leads to low scheduling efficiency of kernel coroutines. So the KCUC and KCUT models are with high latency when the connection number is small. Therefore, COPS is not applicable to applications with low concurrency. 
+\item Lower coroutine context-switching overhead: According to KC-UC vs KCUT and KCUT vs KTUT, the latency of the threading model will gradually exceed that of the coroutine model as the number of connections increases. When the number of connections reaches 32, the latency of KCUT is lower than that of KTUT. The coroutines and threads in the kernel complete the same operation, so the overhead of coroutine context-switching is less than that of threads (even the kernel thread with simplified context switching). When the number of connections is 2, the latency of KCUC is lower than that of KCUT. This is because most of the coroutine context-switching in KCUC model are carried out in userland, while the privilege-switching exist in KCUT model. However, KCUT and KTUT models that use threads will decrease their throughput and increase their context-switching cost rapidly as the number of connections increases to a certain extent. 
 \item At large-scale concurrency, coroutines have obvious advantages: when the number of connections is small, the KTUC model has the lowest latency, which is reasonable, KTUC uses a separate kernel thread to constantly poll the state of sockets, and can respond in a timely manner, so the latency is lowest. However, as the number of connections gradually increases, the advantage is no longer obvious, and the overhead of each poll of the KTUC kernel thread gradually increases. From the comparison of throughput, when the number of connections reaches 64, the CPU is running with the full workload. When the number of connections reaches 96, the latency of KCUC model is lower than that of KTUC model (KCUT and KTUT model cannot complete the test due to heavy workload. Fig.~\ref{fig:throughput-latency} does not show the corresponding throughput and message latency). When the number of connections continues to increase, the throughput of KTUC model decreases significantly, while the throughput of KCUC model does not decrease significantly. Although we did not use a separate thread to complete the data replication operation in our experiment, the analysis shows that the effect of KTUC model will not be significantly improved even if epoll is adopted. On the one hand, epoll requires additional synchronous mutually exclusive overhead because of using producer-consumer model. On the other hand, the overhead of thread context-switching will increase. Therefore, after comparing KCUC with KTUC, we can conclude that COPS is suitable for large-scale concurrent scenario.
 \end{itemize}
 
@@ -636,6 +636,8 @@ This paper proposes COPS, a coroutine-based priority scheduling framework that c
 \begin{acks}
 To Robert, for the bagels and explaining CMYK and color spaces.
 \end{acks}
+
+\balance
 
 %%
 %% The next two lines define the bibliography style to be used, and
