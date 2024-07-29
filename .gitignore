@@ -17,3 +17,12 @@ Article/*.out
 !**/IISWC24/nowidow.sty
 !**/IISWC24/Makefile
 !**/IISWC24/reference.bib
+
+**/*/*.aux
+**/*/*.bbl
+**/*/*.log
+**/*/*.blg
+**/*/*.synctex.gz
+**/*/*.out
+**/*/*.fls
+**/*/*.fdb_latexmk
