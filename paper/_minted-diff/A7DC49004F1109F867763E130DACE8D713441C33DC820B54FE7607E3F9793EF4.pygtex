@@ -1,0 +1,10 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{err}{\PYGZbs{}}\PYG{n}{DIFadd}\PYG{p}{\PYGZob{}}\PYG{k}{pub}\PYG{+w}{ }\PYG{k}{trait}\PYG{+w}{ }\PYG{n}{Future}\PYG{+w}{ }\PYG{p}{\PYGZcb{}\PYGZob{}}
+\PYG{+w}{  }\PYG{err}{\PYGZbs{}}\PYG{n}{DIFadd}\PYG{p}{\PYGZob{}}\PYG{k}{type} \PYG{n+nc}{Output}\PYG{p}{;}
+\PYG{+w}{  }\PYG{k}{fn} \PYG{n+nf}{poll}\PYG{p}{(}\PYG{n+nb+bp}{self}: \PYG{n+nc}{Pin}\PYG{o}{\PYGZlt{}}\PYG{p}{\PYGZcb{}}\PYG{o}{\PYGZam{}}\PYG{err}{\PYGZbs{}}\PYG{n}{DIFadd}\PYG{p}{\PYGZob{}}\PYG{k}{mut}\PYG{+w}{ }\PYG{n+nb+bp}{Self}\PYG{o}{\PYGZgt{}}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{cx}: \PYG{p}{\PYGZcb{}}\PYG{o}{\PYGZam{}}\PYG{err}{\PYGZbs{}}\PYG{n}{DIFadd}\PYG{p}{\PYGZob{}}\PYG{k}{mut}\PYG{+w}{ }\PYG{n}{Context}\PYG{o}{\PYGZlt{}\PYGZsq{}}\PYG{n+nb}{\PYGZus{}}\PYG{o}{\PYGZgt{}}\PYG{p}{)}\PYG{+w}{ }\PYGZhy{}\PYGZgt{} \PYG{n+nc}{Poll}\PYG{o}{\PYGZlt{}}\PYG{n+nb+bp}{Self}::\PYG{n}{Output}\PYG{o}{\PYGZgt{}}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}\PYGZcb{}}
+\PYG{err}{\PYGZbs{}}\PYG{n}{DIFadd}\PYG{p}{\PYGZob{}}\PYG{k}{enum} \PYG{n+nc}{Poll}\PYG{o}{\PYGZlt{}}\PYG{n}{T}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{p}{\PYGZcb{}\PYGZob{}}
+\PYG{+w}{  }\PYG{err}{\PYGZbs{}}\PYG{n}{DIFadd}\PYG{p}{\PYGZob{}}\PYG{n}{Ready}\PYG{p}{(}\PYG{n}{T}\PYG{p}{),}
+\PYG{+w}{  }\PYG{n}{Pending}\PYG{p}{,}
+\PYG{p}{\PYGZcb{}\PYGZcb{}}
+\end{Verbatim}

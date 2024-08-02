@@ -1,0 +1,306 @@
+@article{2009Revisiting,
+  title={Revisiting Coroutines},
+  author={ Moura, Ana Lucia De  and  Ierusalimschy, Roberto },
+  journal={Acm Transactions on Programming Languages \& Systems},
+  volume={31},
+  number={2},
+  pages={1-31},
+  year={2009},
+
+}
+
+@article{1980Coroutines,
+  title={Coroutines: A Programming Methodology, a Language Design and an Implementation},
+  author={ Marlin, Chris D. },
+  journal={Lecture Notes in Computer Science},
+  volume={95},
+  year={1980},
+}
+
+@online{google-search-statistics,
+    Author = {Maryam Mohsin},
+	title = {10 Google Search Statistics You Need to Know in 2023 {\textbar} Oberlo},
+	url = {https://www.oberlo.com/blog/google-search-statistics},
+    year = {2023},
+}
+
+
+@techreport{Lee:EECS-2006-1,
+    Author = {Lee, Edward A.},
+    Title = {The Problem with Threads},
+    Institution = {EECS Department, University of California, Berkeley},
+    Year = {2006},
+    Month = {Jan},
+    URL = {http://www2.eecs.berkeley.edu/Pubs/TechRpts/2006/EECS-2006-1.html},
+    Number = {UCB/EECS-2006-1},
+    Note = {The published version of this paper is in IEEE Computer 39(5):33-42, May 2006.},
+    Abstract = {Threads are a seemingly straightforward adaptation of the dominant sequential model of computation to concurrent systems. Languages require little or no syntactic changes to support threads, and operating systems and architectures have evolved to efficiently support them. Many technologists are pushing for increased use of multithreading in software in order to take advantage of the predicted increases in parallelism in computer architectures. In this paper, I argue that this is not a good idea. Although threads seem to be a small step from sequential computation, in fact, they represent a huge step. They discard the most essential and appealing properties of sequential computation: understandability, predictability, and determinism. Threads, as a model of computation, are wildly nondeterministic, and the job of the programmer becomes one of pruning that nondeterminism. Although many research techniques improve the model by offering more effective pruning, I argue that this is approaching the problem backwards. Rather than pruning nondeterminism, we should build from essentially deterministic, composable components. Nondeterminism should be explicitly and judiciously introduced where needed, rather than removed where not needed. The consequences of this principle are profound. I argue for the development of concurrent coordination languages based on sound, composable formalisms. I believe that such languages will yield much more reliable, and more concurrent programs.}
+}
+
+@inproceedings{Gammo2004ComparingAE,
+  title={Comparing and Evaluating epoll, select, and poll Event Mechanisms},
+  author={Louay Gammo and Tim Brecht and Amol Shukla and David Pariag},
+  year={2004},
+  url={https://api.semanticscholar.org/CorpusID:8488207}
+}
+
+@online{alvinashcraft_io_2022,
+	title = {I/O Completion Ports - Win32 apps},
+	url = {https://learn.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports},
+	abstract = {I/O completion ports provide an efficient threading model for processing multiple asynchronous I/O requests on a multiprocessor system.},
+	author = {alvinashcraft},
+	date = {2022-08-08},
+    year = {2022},
+	langid = {english},
+}
+
+@online{io_uring,
+	title = {Welcome to Lord of the io\_uring — Lord of the io\_uring documentation},
+	url = {https://unixism.net/loti/index.html},
+    author={Shuveb Hussain},
+    year = {2020},
+}
+
+@article{jones2006boost,
+  author       = {Jones, M. T.},
+  title        = {Boost application performance using asynchronous I/O},
+  journal      = {IBM Developer},
+  year         = {2006},
+  url          = {https://developer.ibm.com/articles/l-async/#:~:text=Summary,CPU%20resources%20available%20to%20you}
+}
+
+@article{li2021pm,
+  title={Pm-aio: An effective asynchronous i/o system for persistent memory},
+  author={Li, Dingding and Zhang, Niyang and Dong, Mianxiong and Chen, Hao and Ota, Kaoru and Tang, Yong},
+  journal={IEEE Transactions on Emerging Topics in Computing},
+  volume={10},
+  number={3},
+  pages={1558--1574},
+  year={2021},
+  publisher={IEEE}
+}
+
+@article{li_combining_2007,
+	title = {Combining events and threads for scalable network services implementation and evaluation of monadic, application-level concurrency primitives},
+	volume = {42},
+	issn = {0362-1340, 1558-1160},
+	url = {https://dl.acm.org/doi/10.1145/1273442.1250756},
+	doi = {10.1145/1273442.1250756},
+	abstract = {This paper proposes to combine two seemingly opposed programming models for building massively concurrent network services: the event-driven model and the multithreaded model. The result is a hybrid design that offers the best of both worlds--the ease of use and expressiveness of threads and the flexibility and performance of events.
+            
+              This paper shows how the hybrid model can be implemented entirely at the application level using
+              concurrency monads
+              in Haskell, which provides type-safe abstractions for both events and threads. This approach simplifies the development of massively concurrent software in a way that scales to real-world network services. The Haskell implementation supports exceptions, symmetrical multiprocessing, software transactional memory, asynchronous I/O mechanisms and application-level network protocol stacks. Experimental results demonstrate that this monad-based approach has good performance: the threads are extremely lightweight (scaling to ten million threads), and the I/O performance compares favorably to that of Linux {NPTL}. tens of thousands of simultaneous, mostly-idle client connections. Such massively-concurrent programs are difficult to implement, especially when other requirements, such as high performance and strong security, must also be met.},
+	pages = {189--199},
+	number = {6},
+	journaltitle = {{ACM} {SIGPLAN} Notices},
+	shortjournal = {{SIGPLAN} Not.},
+	author = {Li, Peng and Zdancewic, Steve},
+	date = {2007-06-10},
+    year = {2007},
+	langid = {english},
+}
+
+@inproceedings{howell_cooperative_2002,
+	title = {Cooperative Task Management without Manual Stack Management},
+	url = {https://www.microsoft.com/en-us/research/publication/cooperative-task-management-without-manual-stack-management/},
+	abstract = {Cooperative task management can provide program architects with ease of reasoning about concurrency issues. This property is often espoused by those who recommend "event-driven" programming over "multi-threaded" programming. Those terms conflate several issues. In this paper, we clarify the issues, and show how one can get the best of both worlds: reason more simply about concurrency in the way "event-driven" advocates recommend, while preserving the readability and maintainability of code associated with "multithreaded" programming. We identify the source of confusion about the two programming styles as a conflation of two concepts: task management and stack management. Those two concerns define a two-axis space in which "multithreaded" and "event-driven" programming are diagonally opposite; there is a third "sweet spot" in the space that combines the advantages of both programming styles. We point out pitfalls in both alternative forms of stack management, manual and automatic, and we supply techniques that mitigate the danger in the automatic case. Finally, we exhibit adaptors that enable automatic stack management code and manual stack management code to interoperate in the same code base.},
+	booktitle = {Proceedings of {USENIX} 2002 Annual Technical Conference},
+	publisher = {{USENIX}},
+	author = {Howell, Jon and Bolosky, Bill and Douceur, John ({JD})},
+	date = {2002-01},
+    year = {2002},
+	note = {Edition: Proceedings of {USENIX} 2002 Annual Technical Conference},
+}
+
+@inproceedings{narayanan2019lxds,
+  title={LXDs: Towards Isolation of Kernel Subsystems.},
+  author={Narayanan, Vikram and Balasubramanian, Abhiram and Jacobsen, Charlie and Spall, Sarah and Bauer, Scotty and Quigley, Michael and Hussain, Aftab and Younis, Abdullah and Shen, Junjie and Bhattacharyya, Moinak and others},
+  booktitle={USENIX Annual Technical Conference},
+  pages={269--284},
+  year={2019}
+}
+
+@article{lin2016memif,
+  title={Memif: Towards programming heterogeneous memory asynchronously},
+  author={Lin, Felix Xiaozhu and Liu, Xu},
+  journal={ACM SIGPLAN Notices},
+  volume={51},
+  number={4},
+  pages={369--383},
+  year={2016},
+  publisher={ACM New York, NY, USA}
+}
+
+@inproceedings{lee2019asynchronous,
+  title={Asynchronous I/O Stack: A Low-latency Kernel I/O Stack for Ultra-Low Latency SSDs.},
+  author={Lee, Gyusun and Shin, Seokha and Song, Wonsuk and Ham, Tae Jun and Lee, Jae W and Jeong, Jinkyu},
+  booktitle={USENIX Annual Technical Conference},
+  pages={603--616},
+  year={2019}
+}
+
+@article{luo_depfast_nodate,
+	title = {{DepFast}: Orchestrating Code of Quorum Systems},
+	abstract = {Quorum systems (e.g., replicated state machines) are critical distributed systems. Building correct, high-performance quorum systems is known to be hard. A major reason is that the protocols in quorum systems lead to non-deterministic state changes and complex branching conditions based on different events (e.g., timeouts). Traditionally, these systems are built with an asynchronous coding style with event-driven callbacks, but often lead to “callback hell” that makes code hard to follow and maintain. Converting to synchronous coding styles (e.g., using coroutines) is challenging because of the complex branching conditions. In this paper, we present Dependably Fast ({DepFast}), an effective, expressive framework for developing quorum systems. {DepFast} provides a unique {QuorumEvent} abstraction to enable building quorum systems in a synchronous style. It also supports composition of multiple events, e.g., timeouts, different quorums. To evaluate {DepFast}, we use it to implement two quorum systems, Raft and Copilot. We show that complex quorum systems implemented by {DepFast} are easy to write and have high performance. Speciﬁcally, it takes 25\%–35\% fewer lines of code to implement Raft and Copilot using {DepFast}, and the {DepFastbased} implementations have comparable performance with the state-of-the-art systems.},
+	author = {Luo, Xuhao and Shen, Weihai and Mu, Shuai and Xu, Tianyin},
+	langid = {english},
+    year = {2022},
+}
+
+@article{von_behren_capriccio_2003,
+	title = {Capriccio: scalable threads for internet services},
+	volume = {37},
+	issn = {0163-5980},
+	url = {https://doi.org/10.1145/1165389.945471},
+	doi = {10.1145/1165389.945471},
+	shorttitle = {Capriccio},
+	abstract = {This paper presents Capriccio, a scalable thread package for use with high-concurrency servers. While recent work has advocated event-based systems, we believe that thread-based systems can provide a simpler programming model that achieves equivalent or superior performance.By implementing Capriccio as a user-level thread package, we have decoupled the thread package implementation from the underlying operating system. As a result, we can take advantage of cooperative threading, new asynchronous I/O mechanisms, and compiler support. Using this approach, we are able to provide three key features: (1) scalability to 100,000 threads, (2) efficient stack management, and (3) resource-aware scheduling.We introduce linked stack management, which minimizes the amount of wasted stack space by providing safe, small, and non-contiguous stacks that can grow or shrink at run time. A compiler analysis makes our stack implementation efficient and sound. We also present resource-aware scheduling, which allows thread scheduling and admission control to adapt to the system's current resource usage. This technique uses a blocking graph that is automatically derived from the application to describe the flow of control between blocking points in a cooperative thread package. We have applied our techniques to the Apache 2.0.44 web server, demonstrating that we can achieve high performance and scalability despite using a simple threaded programming model.},
+	pages = {268--281},
+	number = {5},
+	journaltitle = {{ACM} {SIGOPS} Operating Systems Review},
+	shortjournal = {{SIGOPS} Oper. Syst. Rev.},
+	author = {von Behren, Rob and Condit, Jeremy and Zhou, Feng and Necula, George C. and Brewer, Eric},
+	urldate = {2023-10-25},
+	date = {2003-10-19},
+    year = {2003},
+	keywords = {blocking graph, dynamic stack growth, linked stack management, resource-aware scheduling, user-level threads},
+}
+
+@online{C++20-coroutine,
+	title = {My tutorial and take on C++20 coroutines},
+	url = {https://www.scs.stanford.edu/~dm/blog/c++-coroutines.html},
+    year = {2021},
+    author = {David Mazières},
+}
+
+@article{goroutines,
+    title={Coordinating Goroutines},
+    author={Adam Freeman},
+    journal={Pro Go},
+    issue={},
+    pages={811-835},
+    year={2022},
+}
+
+@phdthesis{rosendahl2017green,
+    title={Green threads in rust},
+    author={Rosendahl, Kevin},
+    year={2017},
+    school={Master’s thesis, Stanford University, Computer Science Department}
+}
+
+@inproceedings{python-coroutine,
+    title={Asynchronous programming with Coroutines in Python},
+    author={Ewoud Van Craeynest},
+    booktitle={FOSDEM 2017},
+    year={2017},
+}
+
+@inproceedings{kotlin-coroutines,
+    title={Kotlin coroutines: design and implementation},
+    author={Roman Elizarov;Mikhail Belyaev;Marat Akhin;Ilmir Usmanov},
+    booktitle={Onward! 2021: Proceedings of the 2021 ACM SIGPLAN International Symposium on New Ideas, New Paradigms, and Reflections on Programming and Software},
+    year={2021},
+}
+
+@online{kpti,
+	title = {{KAISER}: hiding the kernel from user space [{LWN}.net]},
+	url = {https://lwn.net/Articles/738975/},
+    year = {2017},
+    author = {Jonathan Corbet},
+}
+
+
+@online{callbackhell,
+	title = {Callbacks in {JavaScript} {\textbar} Zell Liew},
+	url = {https://zellwk.com/blog/callbacks/},
+	abstract = {Have you come across the term "callback" but don't know what it means? Don't worry, you're not alone. Many newcomers to {JavaScript} find callbacks hard to understand too.
+    Although callbacks can be confusing, you still need to learn them thoroughly as they form a critical concept in {JavaScript}. You can't get very far without knowing callbacks ��.
+    That's what today's article is for! You'll learn what callbacks are, why they're important, and how to use them. ��},
+    year={2017},
+    author = {Zell Liew},
+	date = {2017-06-07},
+	langid = {english},
+}
+
+@article{waterman_volume_nodate,
+	title = {Volume I: Unprivileged {ISA}},
+	author = {Waterman, Andrew and Asanovic, Krste and Division, {CS}},
+	langid = {english},
+    year = {2019},
+}
+
+@techreport{rocket-chip,
+    Author = {Asanović, Krste and Avizienis, Rimas and Bachrach, Jonathan and Beamer, Scott and Biancolin, David and Celio, Christopher and Cook, Henry and Dabbelt, Daniel and Hauser, John and Izraelevitz, Adam and Karandikar, Sagar and Keller, Ben and Kim, Donggyu and Koenig, John and Lee, Yunsup and Love, Eric and Maas, Martin and Magyar, Albert and Mao, Howard and Moreto, Miquel and Ou, Albert and Patterson, David A. and Richards, Brian and Schmidt, Colin and Twigg, Stephen and Vo, Huy and Waterman, Andrew},
+    Title = {The Rocket Chip Generator},
+    Institution = {EECS Department, University of California, Berkeley},
+    Year = {2016},
+    Month = {Apr},
+    URL = {http://www2.eecs.berkeley.edu/Pubs/TechRpts/2016/EECS-2016-17.html},
+    Number = {UCB/EECS-2016-17},
+    Abstract = {Rocket Chip is an open-source Sysem-on-Chip design generator that emits synthesizable RTL. It leverages the Chisel hardware construction language to compose a library of sophisticated generators for cores, caches, and interconnects into an integrated SoC. Rocket Chip generates general-purpose processor cores that use the open RISC-V ISA, and provides both an in-order core generator (Rocket) and an out-of-order core generator (BOOM). For SoC designers interested in utilizing heterogeneous specialization for added efficiency gains, Rocket Chip supports the integration of custom accelerators in the form of instruction set extensions, coprocessors, or fully independent novel cores. Rocket Chip has been taped out (manufactured) eleven times, and yielded functional silicon prototypes capable of booting Linux.}
+}
+
+@online{michael_kerrisk_vdso7_2023,
+	title = {vdso(7) - Linux manual page},
+	url = {https://man7.org/linux/man-pages/man7/vdso.7.html},
+	author = {Michael Kerrisk},
+	urldate = {2023-10-28},
+	date = {2023-06-24},
+}
+
+@misc{rcore-os/rCore-Tutorial-v3,
+  author = {rcore-os},
+  title = {rCore-Tutorial-v3},
+  year = {2023},
+  howpublished = {\url{https://github.com/rcore-os/rCore-Tutorial-v3}},
+}
+
+@online{smoltcp,
+  author = {smoltcp-rs},
+  title = {smoltcp},
+  year = {2023},
+  url = {https://github.com/smoltcp-rs/smoltcp}
+}
+
+@online{axi-eth,
+	title = {{AXI} 1G/2.5G Ethernet Subsystem v7.2 Product Guide},
+	url = {https://docs.xilinx.com/r/en-US/pg138-axi-ethernet},
+	urldate = {2023-11-01},
+    year = {2023},
+}
+
+@online{zynq,
+	title = {Zynq {UltraScale}+ {MPSoC} Data Sheet: Overview ({DS}891)},
+    year = {2022},
+	url = {https://docs.xilinx.com/api/khub/documents/sbPbXcMUiRSJ2O5STvuGNQ/content},
+}
+
+
+@inproceedings{zhang_demikernel_2021,
+	address = {New York, NY, USA},
+	series = {{SOSP} '21},
+	title = {The {Demikernel} {Datapath} {OS} {Architecture} for {Microsecond}-scale {Datacenter} {Systems}},
+	isbn = {978-1-4503-8709-5},
+	url = {https://dl.acm.org/doi/10.1145/3477132.3483569},
+	doi = {10.1145/3477132.3483569},
+	abstract = {Datacenter systems and I/O devices now run at single-digit microsecond latencies, requiring ns-scale operating systems. Traditional kernel-based operating systems impose an unaffordable overhead, so recent kernel-bypass OSes [73] and libraries [23] eliminate the OS kernel from the I/O datapath. However, none of these systems offer a general-purpose datapath OS replacement that meet the needs of μs-scale systems.' AB@This paper proposes Demikernel, a flexible datapath OS and architecture designed for heterogenous kernel-bypass devices and μs-scale datacenter systems. We build two prototype Demikernel OSes and show that minimal effort is needed to port existing μs-scale systems. Once ported, Demikernel lets applications run across heterogenous kernel-bypass devices with ns-scale overheads and no code changes.},
+	urldate = {2023-11-03},
+	booktitle = {Proceedings of the {ACM} {SIGOPS} 28th {Symposium} on {Operating} {Systems} {Principles}},
+	publisher = {Association for Computing Machinery},
+	author = {Zhang, Irene and Raybuck, Amanda and Patel, Pratyush and Olynyk, Kirk and Nelson, Jacob and Leija, Omar S. Navarro and Martinez, Ashlie and Liu, Jing and Simpson, Anna Kornfeld and Jayakar, Sujay and Penna, Pedro Henrique and Demoulin, Max and Choudhury, Piali and Badam, Anirudh},
+	month = oct,
+	year = {2021},
+	keywords = {operating system, datacenters, kernel bypass},
+	pages = {195--211},
+	file = {Full Text PDF:/home/zfl/Zotero/storage/MCLQFU22/Zhang 等 - 2021 - The Demikernel Datapath OS Architecture for Micros.pdf:application/pdf},
+}
+
+@misc{embassy,
+	title = {embassy-rs/embassy: {Modern} embedded framework, using {Rust} and async.},
+	url = {https://github.com/embassy-rs/embassy},
+	urldate = {2024-01-04},
+        year = {2023},
+	file = {embassy-rs/embassy\: Modern embedded framework, using Rust and async.:/home/zfl/Zotero/storage/PW4BIT22/embassy.html:text/html},
+}

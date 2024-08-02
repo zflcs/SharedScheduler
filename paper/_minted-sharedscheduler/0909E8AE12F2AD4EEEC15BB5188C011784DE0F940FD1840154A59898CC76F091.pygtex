@@ -1,0 +1,4 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{+w}{  }\PYG{n}{read}\PYG{o}{!}\PYG{p}{(}\PYG{n}{fd}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{buffer}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{cid}\PYG{p}{);}\PYG{+w}{ }\PYG{c+c1}{// Async call}
+\PYG{+w}{  }\PYG{n}{read}\PYG{o}{!}\PYG{p}{(}\PYG{n}{fd}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{buffer}\PYG{p}{);}\PYG{+w}{ }\PYG{c+c1}{// Sync call}
+\end{Verbatim}

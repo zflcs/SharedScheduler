@@ -1,0 +1,9 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{pub}\PYG{+w}{ }\PYG{k}{struct} \PYG{n+nc}{Coroutine}\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{k}{pub}\PYG{+w}{ }\PYG{n}{cid}: \PYG{n+nc}{CoroutineId}\PYG{p}{,}
+\PYG{+w}{  }\PYG{k}{pub}\PYG{+w}{ }\PYG{n}{kind}: \PYG{n+nc}{CoroutineKind}\PYG{p}{,}
+\PYG{+w}{  }\PYG{k}{pub}\PYG{+w}{ }\PYG{n}{priority}: \PYG{k+kt}{usize}\PYG{p}{,}
+\PYG{+w}{  }\PYG{k}{pub}\PYG{+w}{ }\PYG{n}{future}: \PYG{n+nc}{Pin}\PYG{o}{\PYGZlt{}}\PYG{n+nb}{Box}\PYG{o}{\PYGZlt{}}\PYG{k}{dyn}\PYG{+w}{ }\PYG{n}{Future}\PYG{o}{\PYGZlt{}}\PYG{n}{Output}\PYG{o}{=}\PYG{p}{()}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{o}{\PYGZsq{}}\PYG{n+nb}{static}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n+nb}{Send}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n+nb}{Sync}\PYG{o}{\PYGZgt{}\PYGZgt{}}\PYG{p}{,}
+\PYG{+w}{  }\PYG{k}{pub}\PYG{+w}{ }\PYG{n}{waker}: \PYG{n+nc}{Arc}\PYG{o}{\PYGZlt{}}\PYG{n}{Waker}\PYG{o}{\PYGZgt{}}\PYG{p}{,}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}
