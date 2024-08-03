@@ -1,7 +1,7 @@
 %%
 %DIF LATEXDIFF DIFFERENCE FILE
 %DIF DEL ../paper-base/sharedscheduler.tex   Mon Jul 29 17:01:18 2024
-%DIF ADD sharedscheduler.tex                 Fri Aug  2 20:05:11 2024
+%DIF ADD sharedscheduler.tex                 Sat Aug  3 17:06:29 2024
 %% This is file `sample-sigconf.tex',
 %% generated with the docstrip utility.
 %%
@@ -631,8 +631,6 @@ Similar to the thread state model, coroutines have five basic states: create, re
 }
 
 \begin{table}[]
-  \caption{\DIFaddFL{Interface of COPS.}}
-  \label{tab:interface}
   \begin{tabular}{@{}cc@{}}
   \toprule
   \DIFaddFL{Function                     }& \DIFaddFL{Return Value }\\ \midrule
@@ -642,6 +640,9 @@ Similar to the thread state model, coroutines have five basic states: create, re
   \DIFaddFL{set\_priority(cid, priority) }&              \\
   \DIFaddFL{alloc\_cpu(cpu\_num)          }&              \\ \bottomrule
   \end{tabular}
+  \caption{\DIFaddFL{Interface of COPS.}}
+  \label{tab:interface}
+  \vspace{-3em}
 \end{table}
 
 \DIFaddend \subsection{Global Cooperative Scheduling Mechanism}
@@ -825,9 +826,13 @@ In \DIFdelbegin \DIFdel{order to facilitate application developers to use COPS t
 In order to verify the effectiveness of COPS in building highly concurrent asynchronous programs and more accurate control of coroutines, we set an evaluation in FPGA. The FPGA model is Zynq UltraScale+ XCZU15EG-2FFVB1156 MPSoC \cite{zynq}. We build a five-level RISC-V pipelining processor, which is based on the rocket-chip \cite{rocket-chip} (a RISC-V soft IP core), in FPGA. Since asynchronous system calls relys on the relevant functions of user-level interruption, we implement N extension \cite{waterman_volume_nodate} on rocket-chip. We run an operating system based on COPS framework on the RISC-V subsystem, and finally complete the evaluation of COPS by simulating the real web server application scenario. The total configuration parameters are shown in Table \ref{tab:cfg}.
 
 \begin{table}
-  \caption{Configuration of evaluation}
-  \label{tab:cfg}
-  \begin{tabular}{|c|c|c|}
+  \DIFdelbeginFL %DIFDELCMD < \caption{%
+{%DIFAUXCMD
+\DIFdelFL{Configuration of evaluation}}
+  %DIFAUXCMD
+%DIFDELCMD < \label{tab:cfg}
+%DIFDELCMD <   %%%
+\DIFdelendFL \begin{tabular}{|c|c|c|}
     \hline
     \multirow{3}{*}[-0.5cm]{FPGA} & \multicolumn{2}{c|}{ \makecell{Zynq UltraScale+ \\ XCZU15EG-2FFVB1156 MPSoC \cite{zynq}}} \\                             \cline{2-3}
                           & \makecell{RISC-V \\ soft IP core} & \makecell{ rocket-chip \cite{rocket-chip} with N \\ extension, 4 Core, 100MHz } \\ \cline{2-3}
@@ -839,7 +844,10 @@ In order to verify the effectiveness of COPS in building highly concurrent async
     \makecell{Network \\ Stack} & \multicolumn{2}{c|}{ smoltcp\cite{smoltcp} } \\
     \hline
   \end{tabular}
-\end{table}
+  \DIFaddbeginFL \caption{\DIFaddFL{Configuration of evaluation.}}
+  \label{tab:cfg}
+  \vspace{-3em}
+\DIFaddendFL \end{table}
 
 The simulated web server application scenario consists of two parts. One part is the client running on PC, sending a certain length of matrix data to the server regularly, and receiving the response from the server. The other part is the server in the FPGA, \DIFaddbegin \DIFadd{combined the two usage patterns, }\DIFaddend which establishes a connection with the client, performs matrix operations on the matrix data sent by the client and returns the results to the client. The server has the following three components:
 
@@ -916,22 +924,21 @@ The test start after all connections between the client and the server are estab
 %DIFDELCMD < %%%
 \DIFdelend \DIFaddbegin 
 
-\textbf{\DIFadd{Less memory usage}}\DIFadd{: In addition to the comparison of throughput and latency, we also compare the memory usage of the four combinations. The user-level threads are kernel-supported, which have two stacks at the same time, one for execution in userland and the other for execution in kernel. Meanwhile, no matter the kernel coroutines or the userland coroutines, they must run on a stack. The stack size is staticly configured as 0x4000 bytes. The size of three components implemented by using coroutines are 120(Receiving request component), 80(Handling Request component) and 64(Sending response component) bytes. Models built using coroutines have significant advantages in terms of memory usage when the amount of connection is small. The memory usage comparison of the four models when established 64 connections are shown in Table \ref{tab:mem_usage}.
+\textbf{\DIFadd{Less memory usage}}\DIFadd{: In addition to the comparison of throughput and latency, we also compare the memory usage of coroutines and threads. The user-level threads are kernel-supported, which have two stacks at the same time, one for execution in userland and the other for execution in kernel. Meanwhile, no matter the kernel coroutines or the userland coroutines, they must run on a stack. The stack size is staticly configured as 0x4000 bytes. The size of three components implemented by using coroutines are 120(Receiving request component), 80(Handling Request component) and 64(Sending response component) bytes. The size of kernel coroutine is 176 bytes. Therefore, establishing a connection in the KTUT model needs to occupy 0x4000 * 2 * 3 bytes, while the KCUC model only needs to occupy 0x4000 * 2 + 176 + 120 + 80 + 64 bytes. Table \ref{tab:mem_usage} shows the maximum connections that can be established for the KTUT model and the KCUC model under certain settings.
 }
 
-\begin{table}[htbp]
-	\centering
-	\caption{\DIFaddFL{Memory usage of the four models.}}
-	\label{tab:mem_usage}
-	\begin{tabular}{@{}cccc@{}}
-		\toprule
-		\DIFaddFL{Model }& \makecell{Total Memory \\ Usage(Bytes)} & \DIFaddFL{Kernel                  }& \DIFaddFL{Userland                      }\\ \midrule
-		\DIFaddFL{KCUC  }& \DIFaddFL{59904   }& \makecell{0x4000+\\176*64}       & \makecell{0x4000+\\(120+80+64)*64} \\
-		\DIFaddFL{KCUT  }& \DIFaddFL{6302720 }& \makecell{0x4000*3*64+\\176*64} & \DIFaddFL{0x4000*3*64               }\\
-		\DIFaddFL{KTUT  }& \DIFaddFL{6291456 }& \DIFaddFL{0x4000*3*64         }& \DIFaddFL{0x4000*3*64               }\\
-		\DIFaddFL{KTUC  }& \DIFaddFL{65024   }& \DIFaddFL{0x4000+0x4000         }& \makecell{0x4000+\\(120+80+64)*64} \\ \bottomrule
-	\end{tabular}
-	\vspace{-1.0em}
+\begin{table}
+  \begin{tabular}{cccc}
+    \hline
+    \DIFaddFL{Configuration }& \DIFaddFL{Size(bytes) }& \DIFaddFL{KCUC }& \DIFaddFL{KTUT }\\ \hline
+    \DIFaddFL{kernel heap   }& \DIFaddFL{0x80\_0000  }& \multirow{3}{*}{385} & \multirow{3}{*}{186} \\ 
+    \DIFaddFL{kernel frame  }& \DIFaddFL{0x1A0\_0000  }\\ 
+    \DIFaddFL{user heap     }& \DIFaddFL{0x20\_0000   }\\ 
+    \hline
+  \end{tabular}
+  \caption{\DIFaddFL{Maximum connections of KCUC and KTUT.\textnormal{The stack used by the thread is allocated from the kernel frame.}}}
+  \label{tab:mem_usage}
+  \vspace{-3em}
 \end{table}
 \DIFaddend 
 

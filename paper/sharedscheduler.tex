@@ -423,8 +423,6 @@ COPS provides the \textit{spawn} operator to create a new coroutine. Besides, CO
 Using the COPS API, developers can take advantage of coroutine at mostly without any restrictions, no matter in the kernel or user space.
 
 \begin{table}[]
-  \caption{Interface of COPS.}
-  \label{tab:interface}
   \begin{tabular}{@{}cc@{}}
   \toprule
   Function                     & Return Value \\ \midrule
@@ -434,6 +432,9 @@ Using the COPS API, developers can take advantage of coroutine at mostly without
   set\_priority(cid, priority) &              \\
   alloc\_cpu(cpu\_num)          &              \\ \bottomrule
   \end{tabular}
+  \caption{Interface of COPS.}
+  \label{tab:interface}
+  \vspace{-3em}
 \end{table}
 
 \subsection{Global Cooperative Scheduling Mechanism}
@@ -549,8 +550,6 @@ In order to illustrate that how coroutines can be combined with asynchronous I/O
 In order to verify the effectiveness of COPS in building highly concurrent asynchronous programs and more accurate control of coroutines, we set an evaluation in FPGA. The FPGA model is Zynq UltraScale+ XCZU15EG-2FFVB1156 MPSoC \cite{zynq}. We build a five-level RISC-V pipelining processor, which is based on the rocket-chip \cite{rocket-chip} (a RISC-V soft IP core), in FPGA. Since asynchronous system calls relys on the relevant functions of user-level interruption, we implement N extension \cite{waterman_volume_nodate} on rocket-chip. We run an operating system based on COPS framework on the RISC-V subsystem, and finally complete the evaluation of COPS by simulating the real web server application scenario. The total configuration parameters are shown in Table \ref{tab:cfg}.
 
 \begin{table}
-  \caption{Configuration of evaluation}
-  \label{tab:cfg}
   \begin{tabular}{|c|c|c|}
     \hline
     \multirow{3}{*}[-0.5cm]{FPGA} & \multicolumn{2}{c|}{ \makecell{Zynq UltraScale+ \\ XCZU15EG-2FFVB1156 MPSoC \cite{zynq}}} \\                             \cline{2-3}
@@ -563,6 +562,9 @@ In order to verify the effectiveness of COPS in building highly concurrent async
     \makecell{Network \\ Stack} & \multicolumn{2}{c|}{ smoltcp\cite{smoltcp} } \\
     \hline
   \end{tabular}
+  \caption{Configuration of evaluation.}
+  \label{tab:cfg}
+  \vspace{-3em}
 \end{table}
 
 The simulated web server application scenario consists of two parts. One part is the client running on PC, sending a certain length of matrix data to the server regularly, and receiving the response from the server. The other part is the server in the FPGA, combined the two usage patterns, which establishes a connection with the client, performs matrix operations on the matrix data sent by the client and returns the results to the client. The server has the following three components:
@@ -612,21 +614,20 @@ The test start after all connections between the client and the server are estab
 
 \textbf{Coroutines have obvious advantages with high concurrency}: when the number of connections is small, the KTUC model has the lowest latency, which is reasonable, KTUC uses a separate kernel thread to constantly poll the state of sockets, and can respond in a timely manner, so the latency is lowest. However, as the number of connections gradually increases, the advantage is no longer obvious, and the overhead of each poll of the KTUC kernel thread gradually increases. From the comparison of throughput, when the number of connections reaches 64, the CPU is running with the full workload. When the number of connections reaches 96, the latency of KCUC model is lower than that of KTUC model (KCUT and KTUT model cannot complete the test due to heavy workload. Figure \ref{fig:throughput-latency} does not show the corresponding throughput and message latency). When the number of connections continues to increase, the throughput of KTUC model decreases significantly, while the throughput of KCUC model does not decrease significantly. Although we did not use a separate thread to complete the data replication operation in our experiment, the analysis shows that the effect of KTUC model will not be significantly improved even if epoll is adopted. On the one hand, epoll requires additional synchronous mutually exclusive overhead because of using producer-consumer model. On the other hand, the overhead of thread context-switching will increase. Therefore, after comparing KCUC with KTUC, we can conclude that COPS is suitable for large-scale concurrent scenario.
 
-\textbf{Less memory usage}: In addition to the comparison of throughput and latency, we also compare the memory usage of the four combinations. The user-level threads are kernel-supported, which have two stacks at the same time, one for execution in userland and the other for execution in kernel. Meanwhile, no matter the kernel coroutines or the userland coroutines, they must run on a stack. The stack size is staticly configured as 0x4000 bytes. The size of three components implemented by using coroutines are 120(Receiving request component), 80(Handling Request component) and 64(Sending response component) bytes. Models built using coroutines have significant advantages in terms of memory usage when the amount of connection is small. The memory usage comparison of the four models when established 64 connections are shown in Table \ref{tab:mem_usage}.
+\textbf{Less memory usage}: In addition to the comparison of throughput and latency, we also compare the memory usage of coroutines and threads. The user-level threads are kernel-supported, which have two stacks at the same time, one for execution in userland and the other for execution in kernel. Meanwhile, no matter the kernel coroutines or the userland coroutines, they must run on a stack. The stack size is staticly configured as 0x4000 bytes. The size of three components implemented by using coroutines are 120(Receiving request component), 80(Handling Request component) and 64(Sending response component) bytes. The size of kernel coroutine is 176 bytes. Therefore, establishing a connection in the KTUT model needs to occupy 0x4000 * 2 * 3 bytes, while the KCUC model only needs to occupy 0x4000 * 2 + 176 + 120 + 80 + 64 bytes. Table \ref{tab:mem_usage} shows the maximum connections that can be established for the KTUT model and the KCUC model under certain settings.
 
-\begin{table}[htbp]
-	\centering
-	\caption{Memory usage of the four models.}
-	\label{tab:mem_usage}
-	\begin{tabular}{@{}cccc@{}}
-		\toprule
-		Model & \makecell{Total Memory \\ Usage(Bytes)} & Kernel                  & Userland                      \\ \midrule
-		KCUC  & 59904   & \makecell{0x4000+\\176*64}       & \makecell{0x4000+\\(120+80+64)*64} \\
-		KCUT  & 6302720 & \makecell{0x4000*3*64+\\176*64} & 0x4000*3*64               \\
-		KTUT  & 6291456 & 0x4000*3*64         & 0x4000*3*64               \\
-		KTUC  & 65024   & 0x4000+0x4000         & \makecell{0x4000+\\(120+80+64)*64} \\ \bottomrule
-	\end{tabular}
-	\vspace{-1.0em}
+\begin{table}
+  \begin{tabular}{cccc}
+    \hline
+    Configuration & Size(bytes) & KCUC & KTUT \\ \hline
+    kernel heap   & 0x80\_0000  & \multirow{3}{*}{385} & \multirow{3}{*}{186} \\ 
+    kernel frame  & 0x1A0\_0000  \\ 
+    user heap     & 0x20\_0000   \\ 
+    \hline
+  \end{tabular}
+  \caption{Maximum connections of KCUC and KTUT.\textnormal{The stack used by the thread is allocated from the kernel frame.}}
+  \label{tab:mem_usage}
+  \vspace{-3em}
 \end{table}
 
 \subsection{Priority orientation}
