@@ -42,35 +42,35 @@
 
 \title{COPS: A coroutine-based priority scheduling framework perceived by the operating system}
 
-% \author{\IEEEauthorblockN{Anonymous Authors}}
+\author{\IEEEauthorblockN{Anonymous Authors}}
 
-\author{\IEEEauthorblockN{1\textsuperscript{st} Fangliang Zhao}
-\IEEEauthorblockA{\textit{Tsinghua University} \\
-zfl22@mails.tsinghua.edu.cn}
-\and
-\IEEEauthorblockN{2\textsuperscript{nd} Donghai Liao}
-\IEEEauthorblockA{\textit{Beijing Institute of Technology} \\
-ctrlz.donghai@gmail.com}
-\and
-\IEEEauthorblockN{3\textsuperscript{rd} Jingbang Wu}
-\IEEEauthorblockA{\textit{Beijing Technology and Business University} \\
-wujingbang@btbu.edu.cn}
-\linebreakand
-\IEEEauthorblockN{4\textsuperscript{th} Huimei Lu}
-\IEEEauthorblockA{\textit{Beijing Institute of Technology} \\
-luhuimei@bit.edu.cn}
-\and
-\IEEEauthorblockN{5\textsuperscript{th} Yong Xiang}
-\IEEEauthorblockA{\textit{Tsinghua University} \\
-xyong@tsinghua.edu.cn}  
-}
+% \author{\IEEEauthorblockN{1\textsuperscript{st} Fangliang Zhao}
+% \IEEEauthorblockA{\textit{Tsinghua University} \\
+% zfl22@mails.tsinghua.edu.cn}
+% \and
+% \IEEEauthorblockN{2\textsuperscript{nd} Donghai Liao}
+% \IEEEauthorblockA{\textit{Beijing Institute of Technology} \\
+% ctrlz.donghai@gmail.com}
+% \and
+% \IEEEauthorblockN{3\textsuperscript{rd} Jingbang Wu}
+% \IEEEauthorblockA{\textit{Beijing Technology and Business University} \\
+% wujingbang@btbu.edu.cn}
+% \linebreakand
+% \IEEEauthorblockN{4\textsuperscript{th} Huimei Lu}
+% \IEEEauthorblockA{\textit{Beijing Institute of Technology} \\
+% luhuimei@bit.edu.cn}
+% \and
+% \IEEEauthorblockN{5\textsuperscript{th} Yong Xiang}
+% \IEEEauthorblockA{\textit{Tsinghua University} \\
+% xyong@tsinghua.edu.cn}  
+% }
 
 \maketitle
 
 \begin{abstract}
-The multi-threading model in the general operating systems is becoming insufficient in applications with increasing amounts of concurrency, due to the context-switching costs in the kernel multi-threading. In this paper, a new concurrency model named COPS is proposed. COPS uses a priority-based coroutine model as the smallest task unit to replace the multi-threading model in large concurrency scenarios, and provides a cohesive priority-based scheduling framework for kernel space and user space coroutines. COPS introduces coroutines as first-class objects in the OS to provide asynchronous I/O mechanism, which takes kernel coroutines as a bridge between I/O operations and devices and takes user coroutines as a bridge between applications and the OS's services respectively.
+The multi-threading model in the general operating systems is becoming insufficient in applications with increasing amounts of concurrency, due to the high context-switching costs associated with kernel multi-threading. In this paper, we propose a new concurrency model called COPS. COPS employs a priority-based coroutine model as the fundamental task unit, replacing the traditional multi-threading model in scenarios with high concurrency, and offers a unified priority-based scheduling framework for both kernel and user space coroutines. COPS introduces coroutines as first-class citizens within the OS to provide asynchronous I/O mechanism, using kernel coroutines as a bridge between I/O operations and devices, and user coroutines to bridge applications with the OS services.
 
-We design a prototype of web server based on COPS and conduct extensive experiments in an FPGA-based system to evaluate COPS. Results show that the proposed model achieves one to four times higher throughput while remains relatively lower overhead than that using the multi-threading model in the large concurrency applications.
+We have designed a prototype web server based on COPS and conducted extensive experiments on an FPGA-based system to evaluate COPS. Results show that the proposed model achieves one to four times higher throughput while maintaining relatively lower overhead compared to the multi-threading model in large concurrency applications.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -82,11 +82,11 @@ Multi-threading, Concurrency, Coroutine.
 
 In today's era of data explosion, the ability of the general Operating Systems (OS) to process large amounts of data is receiving more attention. For example, Google's servers handle 883 billion requests per day in 2022 \cite{google-search-statistics}, with an average of 8 million requests per second. The increasing scale of the concurrency in the system poses severe challenges to the traditional multi-threading model, which has two main shortcomings in our point of view. First, the multi-threading model is nondeterministic \cite{Lee:EECS-2006-1}. The execution order of threads is uncertain, resulting in the access order of shared resources being uncertain. When used inappropriately in fixed workflows, multi-threading can lead to greater overhead. In order to improve the performance of the multi-threading model in large concurrency scenarios such as the web server, some research has tried to optimize it, but has not solved the problem mechanically \cite{li_combining_2007, howell_cooperative_2002}.
 
-Second, the multi-threading model is incompatible with the asynchronous I/O mechanism in OS. For instance, Linux uses an event-driven model, such as \textit{select} and \textit{epoll} to handle multiple I/O operations on a single thread, which involves producer-consumer interaction and raises the cost of synchronous mutual exclusion, adding to the kernel's complexity \cite{Gammo2004ComparingAE}. Similarly, Windows' I/O Completion Ports(IOCP) \cite{alvinashcraft_io_2022} offers I/O multiplexing but can be challenging to program correctly due to callback functions \cite{callbackhell}. The io\_uring model, introduced in \cite{io_uring}, enhances efficiency and throughput by using shared memory to avoid data copying. However, it adds kernel complexity and makes interface utilization more difficult \cite{li2021pm}. Furthermore, because the OS is unaware of userland asynchronous tasks, userland-implemented asynchronous interfaces like POSIX AIO increase overhead due to thread handling, I/O buffer replication, and context switching across privilege levels \cite{jones2006boost}.
+Second, the multi-threading model is incompatible with the asynchronous I/O mechanism in OS. For instance, Linux employs an event-driven model, such as \textit{select} and \textit{epoll} to handle multiple I/O operations on a single thread, involving producer-consumer interaction and increasing the cost of synchronous mutual exclusion, thereby adding to the kernel's complexity \cite{Gammo2004ComparingAE}. Similarly, Windows' I/O Completion Ports(IOCP) \cite{alvinashcraft_io_2022} offers I/O multiplexing but can be challenging to program correctly due to callback functions \cite{callbackhell}. The io\_uring model, introduced in \cite{io_uring}, enhances both efficiency and throughput by leveraging shared memory to eliminate data copying. However, this approach adds kernel complexity and complicates interface usage \cite{li2021pm}. Furthermore, because the OS lacks awareness userland asynchronous tasks, asynchronous interfaces implemented in userland, such as POSIX AIO, result in increased overhead due to thread management, I/O buffer replication, and context switching across privilege levels \cite{jones2006boost}.
 
-Asynchronous I/O mechanisms are effective in high concurrency web server environments but challenging to design and implement. The challenge comes not only from providing asynchronous I/O for applications in kernel, but also from building runtime for kernel's asynchronous tasks. LXDs \cite{narayanan2019lxds} created an in-kernel asynchronous runtime for efficient cross-domain processing. Memif \cite{lin2016memif} offered a low-latency, low-overhead interface using asynchronous and hardware-accelerated techniques. Lee \textit{et al.} \cite{lee2019asynchronous} introduced the asynchronous I/O stack (AIOS) to the kernel to reduce the I/O latency. Despite these advancements, most methods operate independently of the kernel's thread scheduler, limiting their adaptability and scalability and complicating the kernel's design.
+Asynchronous I/O mechanisms are effective in high concurrency web server environments but pose significant design and implementation challenges. The challenges arise not only from enabling asynchronous I/O for applications within kernel but also from developing runtime environment for kernel's asynchronous tasks. LXDs \cite{narayanan2019lxds} created an in-kernel asynchronous runtime for efficient cross-domain processing. Memif \cite{lin2016memif} offered a low-latency, low-overhead interface using asynchronous and hardware-accelerated techniques. Lee \textit{et al.} \cite{lee2019asynchronous} introduced the asynchronous I/O stack (AIOS) to the kernel to reduce the I/O latency. Despite these advancements, most methods function independently of the kernel's thread scheduler, which limits their adaptability and scalability and further complicates the kernel's design.
 
-As an alternative concurrency model, the concept of coroutines has not been widely adopted in modern programming languages in many decades. Currently, there is some renewal of interest in coroutines to explore the advantages of coroutines as an alternative to multi-threading. In this paper, we rethink the concurrency model and asynchronous framework to find solutions that could meet the larger-scale and higher performance requirements. We propose COPS\footnote{The \textbf{CO} in COPS represents the coroutine, \textbf{P} represents the priority, and \textbf{S} represents scheduling. All tasks must be carried out under COPS's management.}, a coroutine-based priority scheduling framework in OS. COPS improves the high context-switching overhead and solve the problem of uncertain sequence of accessing shared resources by using coroutines as the basic task unit. In addition, COPS draws on the existing research on asynchronous I/O mechanism, introduces coroutines into the kernel, provides coroutines as first-class objects and combines it with the asynchronous I/O mechanism to provide a coordinated and cohesive scheduling framework for all tasks in OS. 
+As an alternative concurrency model, the concept of coroutines has not been widely adopted in modern programming languages in many decades. Currently, there is a renewal of interest in coroutines to explore their advantages as an alternative to multi-threading. In this paper, we rethink the concurrency model and asynchronous framework to find solutions that could meet the larger-scale and higher performance requirements. We propose COPS\footnote{The \textbf{CO} in COPS represents the coroutine, \textbf{P} represents the priority, and \textbf{S} represents scheduling. All tasks must be carried out under COPS's management.}, a coroutine-based priority scheduling framework in OS. COPS improves high context-switching overhead and solve the problem of uncertain sequence of accessing shared resources by using coroutines as the fundamental task unit. In addition, COPS builds upon existing research on asynchronous I/O mechanisms, integrates coroutines within the kernel, treats them as first-class citizens, and combines them with the asynchronous I/O mechanism to provide a coordinated and unified scheduling framework for all tasks within the OS.
 
 The rest of the paper is organized as follows: In Section \ref{section: Background}, we explain the fall and resurgence of coroutines and the coroutine facilities in Rust language. Section \ref{section: design} details the design of COPS, while Section \ref{section: Common usage patterns} explores common patterns in asynchronous and concurrent programming. Performance results for COPS are presented in Section \ref{section: Performance Evaluation}. We review related work in Section \ref{section: Related Work} and conclude in Section \ref{section: Conclusion}.
 
@@ -95,16 +95,16 @@ The rest of the paper is organized as follows: In Section \ref{section: Backgrou
 
 \subsection{Coroutine}
 
-Coroutines, introduced in the 1960s, offer a lightweight way to improve concurrency with lower resource and overhead compared to processes or threads. The core characteristics of coroutines, shown as follows, are summarized in \cite{1980Coroutines}:
+Coroutines, introduced in the 1960s, offer a lightweight way to improve concurrency with lower resources and overheads compared to processes or threads. The core characteristics of coroutines, shown as follows, are summarized in \cite{1980Coroutines}:
 
 \begin{itemize}[leftmargin=*]
   \item[1)] The values of data local to a coroutine persist between successive calls;
   \item[2)] The execution of a coroutine is suspended as control leaves it, only to carry on where it left off when control re-enters the coroutine at some later stage.
 \end{itemize}
 
-However, such a general definition leaves open relevant issues with respect to a coroutine construct which makes the support of coroutine facilities in programming languages different. Some implementation even contributed to the misconception of the expressive power of coroutines. Additionally, the introduction of first-class continuation and the adoption of multi-threading as a "de facto standard" concurrent construct have contributed to the discard of the coroutine concept.
+However, this general definition leaves open relevant issues regarding the coroutine construct, affecting how coroutine facilities are supported in programming languages. Misunderstandings about the expressive power of coroutines have been perpetuated by some implementations. Additionally, the introduction of first-class continuations and the adoption of multi-threading as a "de facto standard" for concurrent programming have led to a decline in the use of coroutines.
 
-The revival of coroutines comes from the fact that Moura et al. \cite{2009Revisiting} demonstrated that full coroutines have an expressive power equivalent to one-shot continuations and one-shot delimited continuations. Nowdays, modern programming languages, c++ 20 \cite{C++20-coroutine}, Go \cite{goroutines}, Rust \cite{rosendahl2017green}, Python \cite{python-coroutine}, Kotlin \cite{kotlin-coroutines}, etc., all provide varying degrees of support for coroutines.
+The revival of coroutines stems from the fact that Moura et al. \cite{2009Revisiting} have demonstrated that full coroutines have an expressive power equivalent to one-shot continuations and one-shot delimited continuations. Nowdays, modern programming languages, c++ 20 \cite{C++20-coroutine}, Go \cite{goroutines}, Rust \cite{rosendahl2017green}, Python \cite{python-coroutine}, Kotlin \cite{kotlin-coroutines}, etc., all provide varying degrees of support for coroutines.
 
 \subsection{The Coroutine facilities in Rust}
 \label{subsection: rust_async}
@@ -130,14 +130,14 @@ enum Poll<T> {
 \end{mdframed}
 \end{listing}
 
-Besides implementing Future trait manually, Rust also provides async/await keywords to create coroutines and drive the execution of coroutines. The async keyword transforms functions, blocks, or closures into futures without explicitly implementing the Future trait. The await keyword not only can be used to execute the Future object, but also can be used to relinquish CPU when the operation cannot continue, enabling other futures to run concurrently.
+Besides manually implementing Future trait, Rust provides async/await keywords for creating and executing coroutines. The async keyword converts functions, blocks, or closures into futures without explicitly implementing the Future trait. The await keyword executes Future objects and, when an operation cannot continue, relinquishes the CPU.
 
-Through the Future trait and async/await keywords in Rust, the coroutines are provided as first-class objects to developers in the level of language. Moreover, Rust separates the coroutine runtime from coroutine's definition, allowing for customizable runtimes. This separation and definition flexibility could pave the way for introducing coroutines into the kernel, not just user space, and even making coroutines as first-class citizens at the OS level.
+Through the Future trait and async/await keywords in Rust, coroutines are treated as first-class citizens for developers at the language level. Moreover, Rust separates the coroutine runtime from the definition of coroutines, enabling customization of runtimes. This separation and the flexibility in definition could pave the way for introducing coroutines at the kernel level, beyond just user space, and even making coroutines as first-class citizens at the OS level.
 
 \section{Design of COPS}
 \label{section: design}
 
-COPS is designed to enhance the system's concurrency by treating coroutines as the fundamental task unit and integrating them as first-class objects within the OS. Both kernel and application developers can freely utilize coroutines. COPS offers a cohesive priority-based scheduling system for coroutines in both kernel and user spaces. Fig.\ref{fig:arch} illustrates COPS's overall structure. Both applications and the OS maintain their own Executor data structures and share COPS's scheduling framework via vDSO \cite{michael_kerrisk_vdso7_2023}. They represent tasks as coroutines and manage tasks by using the COPS's services through function calls. Applications access other system services via system calls. Additionally, the OS maintains a global bitmap for advanced priority-based cooperative scheduling.
+COPS is designed to enhance system concurrency by treating coroutines as the fundamental task unit and integrating them as first-class citizens within the OS. COPS offers a unified priority-based scheduling system for coroutines in both kernel and user spaces, enabling both kernel and application developers to freely utilize coroutines. Fig.\ref{fig:arch} illustrates COPS's overall structure. Both applications and the OS maintain their own Executor data structures and share COPS's scheduling framework via vDSO \cite{michael_kerrisk_vdso7_2023}. They represent tasks as coroutines and manage tasks by using COPS's services through function calls. Applications access other system services via system calls. Additionally, the OS maintains a global bitmap for advanced priority-based cooperative scheduling.
 
 \begin{figure}[tbp]
   \centering
@@ -152,11 +152,11 @@ In this section, we detail the design of COPS. We start by explaining the data s
 \subsection{Coroutine Runtime}
 \label{section: Coroutine Runtime}
 
-Rust offers the \textbf{Future} and \textbf{Wake} traits to facilitate coroutines without tying them to a specific runtime. This flexibility allows us to create a coroutine runtime suitable for both kernel and userland. The runtime consists of two main components: 
+Rust offers the \textbf{Future} and \textbf{Wake} traits to facilitate coroutines without tying them to a specific runtime. This flexibility facilitates the creation of a coroutine runtime suitable for both kernel and user space. The runtime consists of two main components: 
 
 \subsubsection{Coroutine Control Block}
 
-As detailed in \ref{subsection: rust_async}, the polling method in Future trait is partially transparent, limiting precise coroutine control. To address this, we extends Rust's future and waker abstractions to create coroutine control blocks (CCBs) for more accurate management. The CCB structure is displayed in listing \ref{ccb}. The Wake trait is responsible for saving and switching context of coroutine. Both the execution and the context-switching of the coroutine are done by the compiler and are transparent. Therefore, the future and wake must be described in the CCB. However, relying solely on the future and wake traits results in a basic polling mechanism that cannot allow for precise control or integration with asynchronous I/O. To enable precise control, we have enhanced the CCB with three additional fields: 1) The Cid is used to identify CCB, and plays a key role in asynchronous I/O mechanism; 2) The Kind denotes the type of the coroutine, guilding the subsequent processing after the coroutine reaches a certain stage; 3) The Priority reflects the coroutine's priority level, which is fundamental to COPS's scheduling framework. We did not include a state field in CCB because Rust coroutines only exist in pending or ready states, with their state implicitly determined by the queue they reside in.
+As detailed in \ref{subsection: rust_async}, the poll method in Future trait is partially transparent, limiting the precise control of coroutines. To address this, we extends Rust's future and wake abstractions to create coroutine control blocks (CCBs) for more precise control. The CCB structure is displayed in listing \ref{ccb}. The Wake trait is responsible for saving and restoring coroutine contexts. Both the execution and the context-switching of the coroutine are done by the compiler and are transparent. Therefore, the future and wake must be described in the CCB. However, relying solely on the future and wake traits results in a basic polling mechanism that cannot allow for precise control or integration with asynchronous I/O. To enable precise control, we have enhanced the CCB with three additional fields: 1) The Cid is used to identify CCB, and plays a key role in asynchronous I/O mechanism; 2) The Kind denotes the type of the coroutine, guilding the subsequent processing after the coroutine reaches a certain stage; 3) The Priority reflects the coroutine's priority level, which is fundamental to COPS's scheduling framework. The state field is not included in the CCB because Rust coroutines only exist in pending or ready states, with their state implicitly indicated by the queue they reside in.
 
 
 \begin{listing}
@@ -181,18 +181,18 @@ pub struct Coroutine{
 The core of the coroutine runtime is the Executor, which manages all coroutines in a process based on the coroutine control block. The Executor's primary components consist of the following:
 
 \begin{itemize}[leftmargin=*]
-    \item[1)] Ready Queues and Priority Bitmaps: The Executor manages queues of coroutines sorted by priority, ensuring that the highest priority coroutine is always executed first. It also uses a priority bitmap to track the presence of coroutines at each priority level. While this bitmap is not needed for user-level Executors, it aids in OS-level scheduling by giving the operating system visibility into user-level coroutines.
+    \item[1)] Ready Queues and Priority Bitmaps: The Executor manages queues of coroutines sorted by priority, ensuring that the highest priority coroutine is always executed first. It also employs a priority bitmap to track the presence of coroutines at each priority level. This bitmap, while not needed for user-level Executors, aids in OS-level scheduling by providing the OS with visibility into user-level coroutines.
     \item[2)] Blocking Set: This structure manages all coroutines that are blocked, holding them until the awaited event occurs and triggers their resumption.
 \end{itemize}
 
-These two data structures form the runtime foundation for coroutines and establish a basic priority scheduling mechanism for COPS. This ensures that within a single process's address space, COPS can effectively prioritize and schedule the highest-priority coroutine each time.
+These two data structures form the runtime foundation for coroutines and establish a basic priority scheduling mechanism for COPS. This ensures that within a address space, COPS can effectively prioritize and schedule the highest-priority coroutine each time.
 
 \subsection{Coroutine State Transition Model}
 \label{section: state-transition}
 
-Integrating coroutines into the kernel's asynchronous I/O mechanism has transformed traditional process and thread concepts. For instance, under Kernel Page Table Isolation(KPTI) \cite{kpti}, the kernel acts as a special process with address space switches upon entry and return. Threads now serve as stack providers for coroutines and as multiprocessor system abstractions, rather than as the primary scheduling unit.
+Treating coroutines as first-class citizens within the OS has transformed traditional process and thread concepts. For instance, under Kernel Page Table Isolation(KPTI) \cite{kpti}, the kernel acts as a special process with address space switches upon entry and return. Threads now act as stack providers for coroutines and provide abstractions for multiprocessor systems, rather than being the primary unit of scheduling.
 
-The traditional thread state model has been supplanted by the coroutine state model, which includes five basic states—create, ready, running, blocked, and exit—plus a special running-suspended state due to preemptive scheduling and other interruptions. When a coroutine's execution is interrupted by clock signals, exceptions, or synchronous system calls, it occupies the stack but is not actively running on the CPU, hence the term "running-suspended." This can be further divided into operation interrupt and operation exception states. The coroutine state transition model is depicted in Fig.\ref{fig:state}.
+The traditional thread state model has been supplanted by the coroutine state model, which includes five basic states: create, ready, running, blocked, and exit, plus a special running-suspended state due to preemptive scheduling and other interruptions. When a coroutine's execution is interrupted by a timer interrupt, exceptions, or synchronous system calls, it occupies the stack but does not actively execute on the CPU, hence the term "running-suspended." This can be further categorized into interrupt and exception sub-states. The coroutine state transition model is depicted in Fig.\ref{fig:state}.
 
 \begin{figure}[tbp]
   \centering
@@ -204,17 +204,17 @@ The traditional thread state model has been supplanted by the coroutine state mo
 
 \begin{enumerate}[leftmargin=*]
     \item When a coroutine is created, it begins in the ready state and moves to the running state once it is scheduled.
-    \item A running coroutine can either wait for an event and enter the blocked state or yield to higher-priority coroutines, becoming ready again. This transition does not use the running stack. Alternatively, if an interrupt or exception occurs, the coroutine enters a suspended state. Upon task completion, it moves to the exit state for resource cleanup.
-    \item In the blocked state, a coroutine awaits an event to become ready again. If it is in a suspended state, it does not need to go through the ready state but waits for completion of the relevant handling before resuming running.
+    \item A running coroutine can either wait for an event and enter the blocked state, or yield to higher-priority coroutines and become ready again. This transition does not utilize the coroutine's execution stack. Alternatively, if an interrupt or exception occurs, the coroutine enters a suspended state. Upon task completion, it transitions to the exit state, where resource cleanup is performed.
+    \item In the blocked state, a coroutine awaits an event to transition back to the ready state. If it is in a suspended state, it bypasses the ready state and waits for the completion of the relevant handling routine before resuming execution.
 \end{enumerate}
 
 \subsection{COPS API}
 \label{section: cops api}
 
 Coroutines typically have three basic operations: \textit{create}, \textit{resume} and \textit{yield}. In Rust, the \textit{resume} and \textit{yield} operators are replaced by the poll function and the await keyword respectively.
-Since the future must be driven by await keyword, it is not necessary to consider whether the \textit{yield} is placed in the right places. However, developers must be careful using loop to avoid occupying the CPU for a long time. It is worth mentioning that COPS addresses the issue of accidentally using tight loops by using a global cooperative scheduling mechanism, detailed in section \ref{section: global-cooperative-scheduling}.
+Since the future must be driven by await keyword, it is not necessary to consider whether the \textit{yield} is placed correctly within the asynchronous tasks. However, developers must be careful using loop to avoid occupying the CPU for a long time. It is worth mentioning that COPS addresses the issue of accidentally using tight loops by employing a global cooperative scheduling mechanism, detailed in section \ref{section: global-cooperative-scheduling}.
 
-COPS offers a \textit{spawn} function to create new coroutines, along with additional APIs (\textit{current, wake\_up, set\_priority, alloc\_cpu}) to enhance coroutine control. The \textit{spawn} initiates a coroutine and returns its identity, The \textit{current} retrieves the identity of the current coroutine, The \textit{wake\_up} revives a specified coroutine, the \textit{set\_priority} adjusts a coroutine's priority, and \textit{alloc\_cpu} requests additional CPU resources. By default, applications are allocated one CPU, but \textit{alloc\_cpu(1)} can be used to request more. Table \ref{tab:interface} lists the COPS APIs.
+COPS offers a \textit{spawn} function to create new coroutines, along with additional APIs (\textit{current, wake\_up, set\_priority, alloc\_cpu}) to enhance the control of coroutines. The \textit{spawn} initiates a coroutine and returns its identity, the \textit{current} retrieves the identity of the current coroutine, the \textit{wake\_up} revives a specified coroutine, the \textit{set\_priority} adjusts a coroutine's priority, and \textit{alloc\_cpu} requests additional CPU resources. By default, applications are allocated one CPU, but \textit{alloc\_cpu(1)} can be used to request more. Table \ref{tab:interface} lists the COPS APIs.
 
 With the COPS API, developers can fully leverage coroutines in both kernel and user space with minimal restrictions.
 
@@ -237,13 +237,13 @@ With the COPS API, developers can fully leverage coroutines in both kernel and u
 \subsection{Global Cooperative Scheduling Mechanism}
 \label{section: global-cooperative-scheduling}
 
-COPS offers an advanced global cooperative scheduling mechanism that includes both between kernel and user process and between user process. The priority bitmap, as described in \ref{subsubsection: executor}, is crucial for this mechanism's operation.
+COPS offers an advanced global cooperative scheduling mechanism that includes both between kernel and user process and between user process. The priority bitmap, as described in \ref{subsubsection: executor}, is crucial for this mechanism.
 
-COPS facilitates coordination between kernel and user process coroutines through a global cooperative scheduling approach. During time interrupts, the kernel scans user process Executors' priority bitmaps to create a global priority bitmap, giving the OS some awareness of user-level coroutines. The kernel also has an Executor for managing its coroutines.
+COPS facilitates coordination between kernel and user process coroutines through a global cooperative scheduling approach. Upon the timer interrupt, the kernel scans the priority bitmaps of user process Executors to construct a global priority bitmap, thereby giving the OS awareness of user-level coroutines. Additionally, the kernel possesses an Executor for managing its own coroutines.
 
-The kernel's task scheduling integrates coroutine and process scheduling. One method is to define separate scheduling for processes and coroutines, ensuring high-priority kernel coroutines run first, followed by user processes. However, this can overcomplicate the system and not fully address kernel asynchronous I/O issues mentioned in \ref{section: introduction}. A more elegant solution is to introduce a special kernel coroutine, the "switching coroutine," which identifies the highest-priority user process and handles switching operations, ensuring it never ends as long as user processes exist. It matches the highest process priority to ensure cooperative kernel and user process scheduling based on priority. At initialization, the kernel statically assigns the switching coroutine the highest priority, which then dynamically adjusts as the system runs, based on the priority bitmap scan. This allows the kernel to reuse COPS's priority scheduling mechanism for both process and coroutine scheduling. If the kernel has higher-priority coroutines, all user process coroutines are considered lower priority and wait for the kernel to finish executing. Then, the switching coroutine can schedule the highest-priority process, ensuring coordination between kernel coroutines and user processes.
+COPS integrates coroutine and process scheduling within the kernel. One approach is to have distinct schedulers for processes and coroutines, prioritizing kernel coroutines over user processes. However, this approach can complicate the system and not fully address kernel asynchronous I/O issues discussed in \ref{section: introduction}. A more elegant solution involves a special \textbf{switching coroutine} in the kernel that identifies the highest-priority user process, manages switching operations, and persists as long as user processes exist. It matches the highest process priority, ensuring cooperative scheduling between the kernel and user processes based on their priorities. The kernel statically assigns the \textbf{switching coroutine} the highest priority at initialization, with dynamic adjustments made during runtime based on priority bitmap scans. This allows the kernel to reuse COPS's priority scheduling mechanism for both process and coroutine scheduling. If the kernel has higher-priority coroutines, all user process coroutines are considered of lower priority and wait for the kernel coroutines to complete execution. The \textbf{switching coroutine} can then schedule the highest-priority process, coordinating between kernel coroutines and user processes.
 
-Additionally, we share the read-only permission of the global priority bitmap with user processes to coordinate coroutines across different processes. If a user process detects a higher-priority coroutine in the system or other processes, it will proactively yield to enable mutual coordination. However, indiscriminate global coordination could lead to issues like prolonged CPU occupation by malicious processes or high switching overhead, which we plan to address in future work, but are not discussed in this paper.
+Furthermore, COPS provide user processes with read-only access to the global priority bitmap, for coordinating coroutines across various processes. If a user process detects a higher-priority coroutine within the kernel or other processes, it will proactively yield to facilitate cooperative multitasking. However, excessive global coordination might lead to issues such as prolonged CPU usage by malicious processes or high switching overhead, which we aim to address in our future research. These concerns, while important, are beyond the scope of the present paper.
 
 This mechanism allows COPS to offer an OS-aware coroutine scheduling framework that prevents any single coroutine from monopolizing CPU resources for extended periods. Fig.\ref{fig:flow} illustrates the code logic of COPS.
 
@@ -264,7 +264,7 @@ In this section, we demonstrate concurrent and asynchronous programming patterns
 
 A typical COPS use pattern is depicted in Algorithm \ref{alg: concurrency}, where the application initiates two coroutines: a producer and a consumer. The producer generates data and, when the message queue is full, signals the consumer and yields the CPU. The consumer then processes all data and waits. Subsequently, COPS reschedules the producer.
 
-\begin{algorithm}[!h]
+\begin{algorithm}[!ht]
   \caption{Concurrent Programming}
   \label{alg: concurrency}
   \begin{algorithmic}[1]
@@ -300,13 +300,13 @@ A typical COPS use pattern is depicted in Algorithm \ref{alg: concurrency}, wher
 Another common COPS pattern is for asynchronous programming. By leveraging COPS's coroutine runtime environment, we can convert synchronous system calls into asynchronous ones using coroutines. However, simply changing the interface is not sufficient; the kernel must also implement support for these asynchronous system calls.
 
 \begin{itemize}[leftmargin=*]
-  \item[1)] System Call Interfaces: We have introduced an \textbf{Asyncall} data structure that implements Rust's Future trait to handle system calls asynchronously. This structure checks system call return values to determine whether asynchronous waits are required. Rust macros ensure that synchronous and asynchronous system calls have a similar format, with asynchronous calls needing an extra parameter. An example is shown in the read system call interface \ref{listing: system call}.
-  \item[2)] Kernel Asynchronous I/O Support: When a user coroutine makes an asynchronous system call, the kernel creates a corresponding kernel coroutine that is not executed right away. Control returns promptly to the user coroutine, pausing the current one to allow other user coroutines to run. Once the kernel coroutine completes the asynchronous operation, it awakens the related user coroutine using the cid provided by the system call.
+  \item[1)] System Call Interfaces: We have introduced an \textbf{Asyncall} data structure that implements Rust's Future trait to handle system calls asynchronously. This structure checks the return values of system calls to determine whether asynchronous waits are required. Rust macros ensure a consistent format for both synchronous and asynchronous system calls, with the latter requiring an additional parameter. An example is shown in the read system call interface \ref{listing: system call}.
+  \item[2)] Kernel Asynchronous I/O Support: When a user coroutine initiates an asynchronous system call, the kernel creates a corresponding kernel coroutine that is not executed immediately. Control promptly returns to the user coroutine, allowing it to pause while enabling other user coroutines to run. Once the kernel coroutine completes the asynchronous operation, it awakens the related user coroutine using the cid provided by the system call.
 \end{itemize}
 
 Algorithm \ref{alg: asynchronous programming} illustrates asynchronous programming using the asynchronous system call interface. In the async\_read function, it initiates an asynchronous \textit{read!} system call. If the kernel buffer is empty, async\_read yields the CPU. When data becomes available in the kernel buffer, async\_read is awakened to continue execution.
 
-\begin{algorithm}[!h]
+\begin{algorithm}[!ht]
   \caption{Asynchronous Programming}
   \label{alg: asynchronous programming}
   \begin{algorithmic}[1]
@@ -379,7 +379,7 @@ The PC client measures the latency of each request-response cycle and calculates
 
 \subsection{Coroutine vs. Thread}
 
-To demonstrate the coroutine model's suitability for large-scale concurrency, we implemented the kernel and the web server's three components respectively using coroutines and threads\footnote{The threads in the application are kernel-support thread.}. The coroutine model assigns three coroutines per client-server connection, while the thread model assigns three user threads per connection, each handling a component. We defined four server models based on the use of coroutines(\textbf{C}) and threads(\textbf{T}) in the kernel(\textbf{K}) and userland(\textbf{U}):
+To demonstrate the coroutine model's suitability for large-scale concurrency, we implemented the kernel and the web server's three components respectively using coroutines and threads\footnote{The threads in the application are kernel-support thread.}. The coroutine model assigns three coroutines per client-server connection, while the thread model assigns three threads per connection, each handling a component. We defined four server models based on the use of coroutines(\textbf{C}) and threads(\textbf{T}) in the kernel(\textbf{K}) and userland(\textbf{U}):
 
 \textbf{KCUC}: When a user coroutine calls read(), the kernel creates a coroutine to perform the operation, blocking the user coroutine. Once data is read and copied, the kernel coroutine triggers a user-level interrupt to awaken the user coroutine.
 
@@ -406,7 +406,7 @@ The testing begins once all client-server connections are set up to avoid the in
   \vspace{-1em}
 \end{figure}
 
-\textbf{Runtime overhead}: With few connections, coroutines incur more overhead than threads, as seen in comparisons like KCUC vs KCUT, KCUT vs KTUT, and KCUC vs KTUT in Fig.\ref{fig:throughput-latency}. This overhead is due to COPS's executor being lock-protected. With a small number of connections, COPS can complete tasks with fewer cores but is given extra CPUs for a balanced comparison (the coroutine model has the same core allocation as the thread model). The extra CPUs lead to increased scheduling overhead from unnecessary synchronization. Additionally, frequent yielding on the extra core due to a lack of ready coroutines causes overhead from privilege level switching. Thus, COPS is not ideal for low-concurrency applications.
+\textbf{Runtime overhead}: With few connections, coroutines incur more overhead than threads, as seen in comparisons like KCUC vs KCUT, KCUT vs KTUT, and KCUC vs KTUT in Fig.\ref{fig:throughput-latency}. This overhead is due to COPS's executor being lock-protected. With a small number of connections, COPS can complete tasks with fewer cores but is given extra CPUs for a balanced comparison (the coroutine model has the same core allocation as the thread model). The extra CPUs lead to increased scheduling overhead from unnecessary synchronization. Additionally, frequent yielding on the extra core due to a lack of ready coroutines causes overhead from privilege level switching.
 
 \textbf{Lower coroutine context-switching overhead}: As the number of connections grows, the latency of the thread model (KCUT and KTUT) exceeds that of the coroutine model (KCUC). By the time connections hit 32, KCUT's latency is notably lower than KTUT's. Despite performing the same operations, coroutines have less context-switching overhead than threads, even when comparing to kernel threads with streamlined context switching. At two connections, KCUC's latency is lower than KCUT's due to most context switches happening in userland in the KCUC model, avoiding the privilege-switching overhead present in KCUT. However, as connections increase further, the throughput of KCUT and KTUT decreases, and their context-switching costs rise rapidly.
 
@@ -481,7 +481,7 @@ Embassy\cite{embassy}, an asynchronous driver framework for embedded systems bui
 \section{Conclusion}
 \label{section: Conclusion}
 
-This paper proposes COPS, a coroutine-based priority scheduling framework that can be perceived by the operating system. COPS make the kernel perceive the user-level coroutines by the priority bitmap mechanism and combines kernel coroutines with asynchronous I/O mechanisms. COPS facilitates the development of highly concurrent applications, reduces the overhead associated with traditional multi-threading, and offers efficient asynchronous I/O and priority scheduling.
+This paper introduces COPS, a coroutine-based priority scheduling framework, which allows the operating system to perceive user-level coroutines through a priority bitmap mechanism. COPS integrates coroutines with asynchronous I/O mechanisms, thereby facilitating the development of highly concurrent applications, reducing the overhead of traditional multi-threading, and providing efficient asynchronous I/O and priority scheduling.
 
 Our evaluation demonstrates COPS's ability to deliver high throughput and low latency for highly concurrent applications. Compared to threads (KCUC vs KTUT), COPS's coroutine abstraction can increase throughput by 1.05 to 3.93 times. Additionally, COPS's coroutine priority scheduling effectively meets various requirements and ensures the rational distribution of system resources.
 
