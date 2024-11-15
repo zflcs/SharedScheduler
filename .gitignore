@@ -1,0 +1,11 @@
+*.aux
+*.bbl
+*.log
+*.blg
+*.synctex.gz
+*.out
+*.fls
+*.fdb_latexmk
+
+.vscode
+_minted-cops
